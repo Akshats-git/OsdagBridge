@@ -197,10 +197,14 @@ def _cells(cells: Iterable[Cell]) -> str:
     return " & ".join(out)
 
 
-def _caption_block(caption: Optional[str], label: Optional[str], continued: bool) -> str:
+def _caption_block(caption: Optional[str], label: Optional[str], continued: bool,
+                   numbered: bool = True) -> str:
     if not caption:
         return ""
     title = str(esc(caption))
+    if not numbered:                      # e.g. the executive summary, before chapter 1
+        suffix = r" \textit{%s}" % T.CONTINUED_TEXT if continued else ""
+        return r"\caption*{\textbf{%s}%s}\\*" % (title, suffix) + "\n"
     if continued:
         return (r"\caption*{\textbf{\tablename~\thetable:} \textbf{%s} \textit{%s}}\\*"
                 % (title, T.CONTINUED_TEXT) + "\n")
@@ -250,6 +254,7 @@ def data_table(
     header_groups: Optional[Sequence[tuple]] = None,
     size: Optional[str] = None,
     compact: bool = False,
+    numbered: bool = True,
     width_fraction: float = T.TABLE_WIDTH_FRACTION,
     after: str = "",
 ) -> str:
@@ -268,6 +273,7 @@ def data_table(
         header_groups: ``[(title, span), ...]`` for a merged super-header
             (``""`` title = no label above that span).
         size: a LaTeX size command (e.g. ``"\\small"``) scoped to this table.
+        numbered: ``False`` prints the caption without a "Table x.y" number.
         compact: dense numeric table: theme.COMPACT_SIZE and COMPACT_TABCOLSEP_PT,
             scoped to this table only.
         after: LaTeX appended after the table (kept inside the same group).
@@ -280,8 +286,8 @@ def data_table(
         raise ValueError("group sizes must add up to the number of rows")
 
     table = LongTable(column_spec(columns, width_fraction))
-    first = _caption_block(caption, label, continued=False)
-    cont = _caption_block(caption, label, continued=True)
+    first = _caption_block(caption, label, continued=False, numbered=numbered)
+    cont = _caption_block(caption, label, continued=True, numbered=numbered)
     head = _header_rows(columns, header_groups)
 
     # First-page head, then continuation head, foot and last foot.
@@ -355,31 +361,48 @@ def kv_table(
 # Figures
 # ---------------------------------------------------------------------------
 
-def figure(path: Optional[str], caption: str, label: Optional[str] = None,
+def _fig_caption(caption, label, numbered: bool) -> str:
+    if numbered:
+        return r"\caption{%s}%s" % (esc(caption), r"\label{%s}" % label if label else "")
+    return r"\caption*{\small %s}" % esc(caption)
+
+
+def figure(path: Optional[str], caption, label: Optional[str] = None,
            max_height: str = T.FIGURE_MAX_HEIGHT, width: str = T.FIGURE_FULL_WIDTH,
            numbered: bool = False) -> str:
     """A centred figure with a height cap, built with PyLaTeX ``Figure``.
 
     With ``path=None`` a boxed placeholder with the same caption is produced, so
-    a missing image never breaks the document.
+    a missing image never breaks the document.  ``numbered=True`` uses an
+    automatic "Figure x.y" caption (and ``label``); otherwise the caption text is
+    printed as given.
     """
-    if not path:
-        return placeholder(caption)
     fig = Figure(position="H")
-    fig.add_image(path.replace("\\", "/"),
-                  width=NoEscape(r"%s,height=%s,keepaspectratio" % (width, max_height)))
-    if numbered:
-        fig.append(NoEscape(r"\caption{%s}%s" % (esc(caption), r"\label{%s}" % label if label else "")))
+    if path:
+        fig.add_image(path.replace("\\", "/"),
+                      width=NoEscape(r"%s,height=%s,keepaspectratio" % (width, max_height)))
     else:
-        fig.append(NoEscape(r"\caption*{\small %s}" % esc(caption)))
+        fig.append(NoEscape(r"\centering\fbox{\parbox{0.97\linewidth}{\centering\textit{[ Figure not available: "
+                            + str(esc(caption)) + " ]}}}"))
+    fig.append(NoEscape(_fig_caption(caption, label, numbered)))
     return "\n" + fig.dumps() + "\n"
 
 
 def placeholder(caption: str) -> str:
     """Boxed 'figure not available' block that keeps the layout and the caption."""
-    return (
-        "\n" + r"\begin{figure}[H]" + "\n" + r"\centering" + "\n"
-        + r"\fbox{\parbox{0.97\linewidth}{\centering\textit{[ Figure not available: "
-        + str(esc(caption)) + " ]}}}\n"
-        + r"\caption*{\small " + str(esc(caption)) + "}\n" + r"\end{figure}" + "\n"
-    )
+    return figure(None, caption)
+
+
+def figure_row(items: Sequence[tuple], width: float = T.FIGURE_ROW_WIDTH) -> str:
+    """Several numbered figures side by side: ``[(path_or_None, caption, label), ...]``."""
+    cells = []
+    for path, caption, label in items:
+        if path:
+            body = r"\includegraphics[width=\linewidth]{%s}" % path.replace("\\", "/")
+        else:
+            body = (r"\fbox{\parbox{0.95\linewidth}{\centering\textit{[ %s ]}}}" % esc(caption))
+        cells.append(
+            r"\begin{minipage}[t]{%g\linewidth}" % width + "\n\\centering\n" + body + "\n"
+            + r"\captionof{figure}{%s}%s" % (esc(caption), r"\label{%s}" % label if label else "")
+            + "\n\\end{minipage}")
+    return "\n\\noindent\n" + "\n\\hfill\n".join(cells) + "\n"

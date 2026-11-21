@@ -22,6 +22,7 @@ MARGIN = "1in"
 HEADHEIGHT = "16pt"          # fancyhdr needs >= the header line height + rule
 HEADSEP = "14pt"
 FOOTSKIP = "36pt"            # room for the footer rule, note line and text
+EMERGENCY_STRETCH = "3em"   # lets TeX stretch a line instead of overflowing it
 LINE_STRETCH = 1.15          # \setstretch
 CHAPTER_BEFORE_PT = -30.0    # \titlespacing before a chapter title
 
@@ -73,6 +74,7 @@ NEEDSPACE_HEADING_LINES = 6      # keep a heading with at least this many lines
 NEEDSPACE_TABLE_LINES = 6        # start a table only if this many lines fit
 FIGURE_MAX_HEIGHT = r"0.42\textheight"
 FIGURE_FULL_WIDTH = r"\linewidth"
+FIGURE_ROW_WIDTH = 0.31          # share of \linewidth for each of three side-by-side figures
 SECTION_GAP_PT = 6.0
 
 # ---------------------------------------------------------------------------
