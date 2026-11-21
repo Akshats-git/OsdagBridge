@@ -129,7 +129,8 @@ def check_orphan_headings(pdf_path: str) -> list[dict]:
             if not lines:
                 continue
             txt = lines[-1]["text"].strip()
-            if re.match(r"^\d+(\.\d+)+\s+[A-Z]", txt) or re.match(r"^Table \d+\.\d+", txt):
+            # a heading is words only; "1.5 EQ (b) 219.2 G1 ..." is a table row (load factor)
+            if re.match(r"^\d+(\.\d+)+\s+[A-Z][A-Za-z ,&/()'-]+$", txt) or re.match(r"^Table \d+\.\d+", txt):
                 hits.append({"page": pno, "text": txt[:60]})
     return hits
 
