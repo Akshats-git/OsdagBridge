@@ -1,12 +1,26 @@
 """Design log chapter: the stage-completion lines recorded during the design run."""
+import re
 from typing import List
 
 from osdagbridge.core.reports import latex_kit as K
 from osdagbridge.core.reports.latex_kit import Col
 
 
+_RULE_RUN = re.compile(r"[=\-_*~]{4,}")
+
+
+def _clean(entry: str) -> str:
+    """Drop console decoration (runs of = - _ *) that cannot wrap inside a table cell."""
+    return re.sub(r"\s{2,}", " ", _RULE_RUN.sub(" ", entry)).strip()
+
+
 def design_log(log_entries: List[str]) -> str:
-    entries = [str(e).strip() for e in (log_entries or []) if str(e).strip()]
+    entries = []
+    for e in log_entries or []:
+        text = _clean(str(e))
+        # a bare "[timestamp]" left over from a decoration-only line carries no information
+        if re.sub(r"^\[[^\]]*\]\s*", "", text):
+            entries.append(text)
     head = r"""
 \chapter{Design Log}
 \label{ch:design-log}
