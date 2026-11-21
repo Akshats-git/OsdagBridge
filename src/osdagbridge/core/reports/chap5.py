@@ -499,8 +499,8 @@ def _shear_connector_tables(od, idc):
     t.append(K.data_table(
         [Col("Parameter", 0.24), Col("Formula", 0.36, "c"), Col("Value", 0.16, "c"), Col("Reference", 0.24)],
         [(M(r"Design Resistance, $Q_u$"),
-          M(r"\footnotesize\makecell{$Q_u=\min(Q_{u,s},\,Q_{u,c})$\\[3pt]$Q_{u,s}=\dfrac{0.8\,f_u\,(\pi d^2/4)}{\gamma_v}$"
-            r"\\[3pt]$Q_{u,c}=\dfrac{0.29\,\alpha\,d^2\sqrt{f_{ck}\,E_{cm}}}{\gamma_v}$}"),
+          M(r"\footnotesize\makecell{$Q_u=\min(Q_{u,s},\,Q_{u,c})$\\$Q_{u,s}=\dfrac{0.8\,f_u\,(\pi d^2/4)}{\gamma_v}$"
+            r"\\$Q_{u,c}=\dfrac{0.29\,\alpha\,d^2\sqrt{f_{ck}\,E_{cm}}}{\gamma_v}$}"),
           kn(dr.get(KEY_SD_SC_Qu_kN)), "IRC 22 Cl. 606.3.1 (Eq. 6.1)"),
          (M(r"Fatigue Shear Resistance, $Q_r$"), M(r"IRC 22 Table 8 ($\phi d$, $N_{sc}$)"),
           kn(dr.get(KEY_SD_SC_Qr_kN)), "IRC 22 Cl. 606.3.2 (Table 8)")],

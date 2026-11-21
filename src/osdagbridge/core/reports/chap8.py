@@ -9,32 +9,7 @@ from osdagbridge.core.utils.common import (
 
 
 def ch8_design_log(log_entries: List[str], input_dict: dict) -> str:
-    """Render Chapter 8 using real log_entries, matching Osdag color convention."""
-
-    lines_tex = []
-    if log_entries:
-        for entry in log_entries:
-            for raw_line in entry.split('\n'):
-                line = raw_line.strip()
-                if not line:
-                    continue
-                escaped = (line
-                    .replace('_', r'\_')
-                    .replace('%', r'\%')
-                    .replace('&', r'\&')
-                    .replace('#', r'\#'))
-                upper = line.upper()
-                if 'WARNING' in upper:
-                    lines_tex.append(
-                        rf'\textcolor{{blue}}{{{escaped}}}\\')
-                elif 'ERROR' in upper:
-                    lines_tex.append(
-                        rf'\textcolor{{red}}{{{escaped}}}\\')
-                elif 'INFO' in upper:
-                    lines_tex.append(
-                        rf'\textcolor{{osdagGreen}}{{{escaped}}}\\')
-                else:
-                    continue  # skip lines without a known level — Osdag patter
+    """Chapter 8: standards and assumptions (the log entries are not printed here)."""
 
     mode = str(input_dict.get(KEY_DESIGN_MODE, 'Optimized')).strip().lower()
     is_custom = mode in {'custom', 'customized'}
