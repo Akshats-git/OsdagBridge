@@ -82,7 +82,12 @@ def gui_parity(data: dict) -> None:
     from osdagbridge.desktop.ui.dialogs.additional_input.additional_inputs import AdditionalInputs
 
     _app = QApplication.instance() or QApplication([])
+    # solve_extend_basic_input_dict re-seeds the Loading tab defaults (all vehicles
+    # ticked ...). In the GUI the user's Additional Inputs are applied after it, so
+    # keep what the .osi says for those keys.
+    saved = {k: v for k, v in data.items() if k.startswith(("loading.", "bl_", "design_options", "material."))}
     solve_extend_basic_input_dict(data)          # as loadOSI_inputs / Design do
+    data.update(saved)
     dlg = AdditionalInputs()
     dlg.set_input_dictionary(data)               # as _show_additional_inputs does
     changed = {}
