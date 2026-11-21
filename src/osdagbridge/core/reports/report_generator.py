@@ -723,6 +723,14 @@ def generate_report(payload, request):
                     fig_paths[attr] = 'images/' + attr + '.png'   # relative: .tex stays rebuildable
             payload.figure_data.clear()  # bytes no longer needed — free RAM now
 
+            # ── Charts drawn from the stored results (vector PDF, same rows as the tables) ──
+            from osdagbridge.core.reports import charts
+            from osdagbridge.core.reports.report_data import collect_ur_rows
+            _ur = charts.ur_chart(collect_ur_rows(payload.inputs, payload.output_dict),
+                                  os.path.join(tmp_images, 'ur_chart.pdf'))
+            if _ur:
+                fig_paths['ur_chart'] = 'images/ur_chart.pdf'
+
             # ── Write title-page logos into tmp_dir/assets (auto-deleted) ──
             # Nothing is left next to the PDF. Latex paths are relative to tmp_dir.
             tmp_assets = os.path.join(tmp_dir, 'assets')
@@ -771,7 +779,7 @@ def generate_report(payload, request):
             if 'analysis' in secs:
                 doc_parts.append(ch4_analysis(payload.analysis_summary, fig_paths, bridge, span_m))
             if 'design_checks' in secs:
-                doc_parts.append(ch5_design_checks(payload.design_checks, bridge))
+                doc_parts.append(ch5_design_checks(payload.design_checks, bridge, fig_paths))
             if 'drawings' in secs and payload.options.include_figures:
                 doc_parts.append(ch6_drawings(fig_paths))
 
