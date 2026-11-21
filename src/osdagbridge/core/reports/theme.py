@@ -51,6 +51,8 @@ TABCOLSEP_PT = 6.0
 ARRAYSTRETCH = 1.12
 ARRAYRULE_PT = 0.5
 EXTRAROWHEIGHT_PT = 0.6
+COMPACT_TABCOLSEP_PT = 3.0   # for dense numeric tables (compact=True in the kit)
+COMPACT_SIZE = r"\footnotesize"
 LT_PRE_PT = 0.0              # \LTpre
 LT_POST_PT = 8.0             # \LTpost
 CAPTION_SKIP_PT = 4.0        # \abovecaptionskip / \belowcaptionskip

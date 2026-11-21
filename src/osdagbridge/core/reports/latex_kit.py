@@ -210,6 +210,7 @@ def data_table(
     groups: Optional[Sequence[int]] = None,
     header_groups: Optional[Sequence[tuple]] = None,
     size: Optional[str] = None,
+    compact: bool = False,
     width_fraction: float = T.TABLE_WIDTH_FRACTION,
     after: str = "",
 ) -> str:
@@ -228,6 +229,8 @@ def data_table(
         header_groups: ``[(title, span), ...]`` for a merged super-header
             (``""`` title = no label above that span).
         size: a LaTeX size command (e.g. ``"\\small"``) scoped to this table.
+        compact: dense numeric table: theme.COMPACT_SIZE and COMPACT_TABCOLSEP_PT,
+            scoped to this table only.
         after: LaTeX appended after the table (kept inside the same group).
     """
     n = len(columns)
@@ -287,7 +290,10 @@ def data_table(
             table.add_hline()
 
     body = table.dumps()
-    if size:
+    if compact:
+        size = (size or "") + T.COMPACT_SIZE if not size else size
+        body = "{" + size + r"\setlength{\tabcolsep}{%gpt}" % T.COMPACT_TABCOLSEP_PT + "\n" + body + "\n}"
+    elif size:
         body = "{" + size + "\n" + body + "\n}"
     # Keep the caption and header together with the first rows.
     return "\n" + keep_with_next(T.NEEDSPACE_TABLE_LINES) + body + "\n" + after + "\n"
