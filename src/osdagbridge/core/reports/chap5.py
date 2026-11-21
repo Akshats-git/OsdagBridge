@@ -473,9 +473,9 @@ def _girder_tables(od, idc, entries):
                      _unit(ctrl.get("demand"), ctrl.get("demand_unit")),
                      _unit(ctrl.get("capacity"), ctrl.get("capacity_unit")),
                      _num(ctrl.get("dcr"), 3), K.pass_fail(ctrl.get("status"))))
-    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Controlling LC / Combination", 0.225, "c"),
-                           Col("Controlling Check", 0.15, "c"), Col("Demand", 0.15, "c"),
-                           Col("Capacity", 0.16, "c"), Col("UR", 0.10, "c"), Col("Status", 0.10, "c")],
+    t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Controlling LC / Combination", 0.25, "c"),
+                           Col("Controlling Check", 0.17, "c"), Col("Demand", 0.14, "c"),
+                           Col("Capacity", 0.15, "c"), Col("UR", 0.09, "c"), Col("Status", 0.10, "c")],
                           summ, caption="Girder Design Summary (DCR / Utilization Ratio)", compact=True))
     t.append(K.note(M(r"Note: UR = Demand / Capacity. A value $\leq 1.0$ indicates a passing check. The controlling "
                       r"check is the criterion with the highest UR for each girder, with the real load "

@@ -84,8 +84,8 @@ def _live_load_tables(d):
                 T.fmt(r.braking_kN, 2) if r.braking_kN is not None else ("N/A" if r.braking_considered is None else "---"),
                 T.fmt(r.eccentricity_m, 2) if r.eccentricity_m is not None else "---"))
         out.append(K.data_table(
-            [Col("Vehicle", 0.24), Col("Total Load (kN)", 0.12, "c"), Col("Impact Factor", 0.21, "c"),
-             Col("Applied?", 0.11, "c"), Col("Value (kN)", 0.12, "c"), Col("Eccentricity (m)", 0.20, "c")],
+            [Col("Vehicle", 0.22), Col("Total Load (kN)", 0.12, "c"), Col("Impact Factor", 0.20, "c"),
+             Col("Applied?", 0.14, "c"), Col("Value (kN)", 0.12, "c"), Col("Eccentricity (m)", 0.20, "c")],
             table_rows, caption="Vehicular Live Load (IRC 6:2017)", compact=True,
             header_groups=[("", 3), ("Braking Load (Cl. 211)", 3)]))
         notes = [
