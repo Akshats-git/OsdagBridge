@@ -277,6 +277,8 @@ class ReportPayload:
 class ReportResult:
     pdf_path: Optional[str]
     tex_path: Optional[str]
+    log_path: Optional[str] = None      # pdflatex .log (kept when the build had errors)
+    latex_errors: int = 0               # number of '!' error lines in the final pass
 
 
 class ReportDataBridge:
@@ -691,6 +693,22 @@ def generate_report(payload, request):
         pdf_path = os.path.join(request.output_dir, request.file_stem + '.pdf')
         tex_path = os.path.join(request.output_dir, request.file_stem + '.tex')
 
+        # A PDF left from an earlier run must never be mistaken for this run's output.
+        for stale in (pdf_path, tex_path):
+            if os.path.exists(stale):
+                try:
+                    os.remove(stale)
+                except OSError as exc:
+                    logger.warning("Could not remove stale %s: %s", stale, exc)
+        log_path = os.path.join(request.output_dir, request.file_stem + '.log')
+        if os.path.exists(log_path):
+            try:
+                os.remove(log_path)
+            except OSError:
+                pass
+        n_errors = 0
+        last_rc = None
+
         # Write to temp dir first, compile there, then copy back
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -703,7 +721,7 @@ def generate_report(payload, request):
                     p = os.path.join(tmp_images, attr + '.png')
                     with open(p, 'wb') as fh:
                         fh.write(img_bytes)
-                    fig_paths[attr] = p.replace('\\', '/')
+                    fig_paths[attr] = 'images/' + attr + '.png'   # relative: .tex stays rebuildable
             payload.figure_data.clear()  # bytes no longer needed — free RAM now
 
             # ── Write title-page logos into tmp_dir/assets (auto-deleted) ──
@@ -783,7 +801,9 @@ def generate_report(payload, request):
             with open(tmp_tex, 'w', encoding='utf-8') as f:
                 f.write(full_tex)
 
-            # Compile twice for TOC and references
+            # Compile twice for TOC and references; keep the final pass's status.
+            tmp_log = os.path.join(tmp_dir, request.file_stem + '.log')
+            res = None
             for _ in range(2):
                 try:
                     kwargs = {
@@ -795,13 +815,28 @@ def generate_report(payload, request):
                     }
                     if os.name == 'nt':
                         kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-                    
+
                     res = subprocess.run(
                         [compiler, '-interaction=nonstopmode', request.file_stem + '.tex'],
                         **kwargs
                     )
+                    last_rc = res.returncode
                 except Exception as exc:
                     logger.warning(f"pdflatex run failed: {exc}")
+
+            log_text = ''
+            if os.path.exists(tmp_log):
+                with open(tmp_log, encoding='utf-8', errors='ignore') as fh:
+                    log_text = fh.read()
+            error_lines = [ln for ln in log_text.splitlines() if ln.startswith('!')]
+            n_errors = len(error_lines)
+            if last_rc not in (0, None) or n_errors:
+                # nonstopmode hides errors from the user: surface and keep the log.
+                logger.error("pdflatex finished with exit code %s and %d error(s):\n%s",
+                             last_rc, n_errors, "\n".join(error_lines[:15]))
+                if log_text:
+                    shutil.copy2(tmp_log, log_path)
+                    logger.error("Full LaTeX log saved to %s", log_path)
 
             if os.path.exists(tmp_tex):
                 shutil.copy2(tmp_tex, tex_path)
@@ -810,13 +845,14 @@ def generate_report(payload, request):
 
         if os.path.exists(pdf_path):
             logger.info("Report generated: %s", pdf_path)
-            return ReportResult(pdf_path=pdf_path, tex_path=tex_path)
+            return ReportResult(pdf_path=pdf_path, tex_path=tex_path,
+                                log_path=log_path if os.path.exists(log_path) else None,
+                                latex_errors=n_errors)
 
         logger.error("pdflatex ran but no PDF was produced.")
-        if 'res' in locals():
-            logger.error("pdflatex STDOUT:\n%s", res.stdout.decode('utf-8', 'ignore'))
-            logger.error("pdflatex STDERR:\n%s", res.stderr.decode('utf-8', 'ignore'))
-        return ReportResult(pdf_path=None, tex_path=tex_path)
+        return ReportResult(pdf_path=None, tex_path=tex_path,
+                            log_path=log_path if os.path.exists(log_path) else None,
+                            latex_errors=n_errors)
 
     except Exception as exc:
         logger.error("generate_report failed: %s", exc, exc_info=True)
