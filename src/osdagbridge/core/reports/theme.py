@@ -13,6 +13,12 @@ it can be imported anywhere (including tests without a TeX installation).
 """
 from __future__ import annotations
 
+def tint(hex_colour: str, amount: float) -> str:
+    """Mix an RRGGBB colour with white (amount 0 = white, 1 = the colour itself)."""
+    rgb = [int(hex_colour[i:i + 2], 16) for i in (0, 2, 4)]
+    return "".join("%02X" % round(255 - (255 - c) * amount) for c in rgb)
+
+
 # ---------------------------------------------------------------------------
 # Page geometry
 # ---------------------------------------------------------------------------
@@ -22,10 +28,6 @@ MARGIN = "1in"
 HEADHEIGHT = "16pt"          # fancyhdr needs >= the header line height + rule
 HEADSEP = "14pt"
 FOOTSKIP = "36pt"            # room for the footer rule, note line and text
-MICROTYPE = False            # protrusion only: tighter right edge, no glyph stretching
-PDF_TITLE_SUFFIX = "Design Report"
-PDF_AUTHOR = "OsdagBridge (FOSSEE, IIT Bombay)"
-PDF_SUBJECT = "Steel plate girder bridge design report"
 EMERGENCY_STRETCH = "3em"   # lets TeX stretch a line instead of overflowing it
 LINE_STRETCH = 1.15          # \setstretch
 CHAPTER_BEFORE_PT = -30.0    # \titlespacing before a chapter title
@@ -39,8 +41,8 @@ FAIL_COLOR = "C0392B"
 WARN_COLOR = "B7791F"
 NA_COLOR = "6B7280"
 TEXT_COLOR = "000000"
-TABLE_HEAD_FILL = "EAF1CF"   # tinted header row (None = no fill); a light tint of PRIMARY
-TABLE_ZEBRA_FILL = "F6F8EC"  # alternating rows (None = off)
+TABLE_HEAD_FILL = tint(PRIMARY, 0.22)   # tinted header row (None = no fill)
+TABLE_ZEBRA_FILL = tint(PRIMARY, 0.08)  # alternating rows (None = off)
 
 # LaTeX colour names registered by the preamble (name -> hex)
 LATEX_COLORS = {
@@ -50,6 +52,16 @@ LATEX_COLORS = {
     "urWarn": WARN_COLOR,
     "urNA": NA_COLOR,
 }
+
+# ---------------------------------------------------------------------------
+# Typography and PDF metadata
+# ---------------------------------------------------------------------------
+# protrusion lets punctuation hang into the margin (about 3 pt), which is nicer
+# but breaks the "nothing past the right margin" check, so it is off by default.
+MICROTYPE = False
+PDF_TITLE_SUFFIX = "Design Report"
+PDF_AUTHOR = "OsdagBridge (FOSSEE, IIT Bombay)"
+PDF_SUBJECT = "Steel plate girder bridge design report"
 
 # ---------------------------------------------------------------------------
 # Table style

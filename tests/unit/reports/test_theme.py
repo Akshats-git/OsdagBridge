@@ -41,3 +41,11 @@ def test_preamble_is_built_from_theme():
     assert f"headheight={T.HEADHEIGHT}" in tex
     assert tex.count(r"\titleformat{\chapter}") == 1
     assert r"\DeclareUnicodeCharacter{2264}" in tex
+
+
+def test_table_tints_follow_the_primary_colour():
+    from osdagbridge.core.reports import theme as T
+    assert T.tint("000000", 1.0) == "000000"
+    assert T.tint("91B014", 0.0) == "FFFFFF"
+    assert T.TABLE_HEAD_FILL == T.tint(T.PRIMARY, 0.22)
+    assert len(T.TABLE_ZEBRA_FILL) == 6
