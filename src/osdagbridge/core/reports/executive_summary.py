@@ -3,6 +3,8 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 from osdagbridge.core.reports import latex_kit as K
+from osdagbridge.core.reports import report_data as D
+from osdagbridge.core.reports import theme as T
 from osdagbridge.core.reports.latex_kit import Col
 from osdagbridge.core.reports.report_utils import val, get_girder_entries
 from osdagbridge.core.utils.common import (
@@ -94,7 +96,7 @@ def executive_summary(input_dict, output_dict, fig_paths) -> str:
             except (TypeError, ValueError):
                 dcr = None
             name = str(chk.get("name", "")).strip()
-            is_fail = ("FAIL" in str(chk.get("status", "")).upper()) or (dcr is not None and dcr > 1.0)
+            is_fail = ("FAIL" in str(chk.get("status", "")).upper()) or (dcr is not None and not T.ur_passes(dcr))
             if is_fail and name and name not in failing:
                 failing.append(name)
             if dcr is not None:
@@ -162,6 +164,13 @@ def executive_summary(input_dict, output_dict, fig_paths) -> str:
         ("Overall Utilization Ratio (max)", ur),
     ], header=("Item", "Value"), fracs=(0.4, 0.6))
 
+    ur_rows = D.collect_ur_rows(input_dict, output_dict)
+    verdicts = K.data_table(
+        [Col("Element", 0.40, "c"), Col("Max UR", 0.25, "c"), Col("Verdict", 0.35, "c")],
+        [(el, T.fmt(mx, T.DECIMALS_RATIO), K.pass_fail(v))
+         for el, (v, mx) in D.element_verdicts(ur_rows).items()],
+        caption="Design Verdict by Element", numbered=False)
+
     return r"""
 \newpage
 {\centering\Large\bfseries Executive Summary\par}
@@ -179,11 +188,8 @@ This section provides a concise summary of the bridge design, key inputs, govern
 \addcontentsline{toc}{section}{Key Design Outcomes Summary}
 \label{sec:key-outcomes}
 
-\noindent Girder design pass \\
-Cross bracing design pass \\
-End Diaphragm design pass \\
-Deck design pass
-
+\noindent Verdicts come from the same utilisation-ratio rows as the Overall Design Check Summary table and chart in Section~\ref{sec:overall-summary}: an element passes when its largest UR is $\leq 1.0$, and an element with no design result is reported as n/a, never as a pass.
+""" + verdicts + r"""
 \section*{Design Assumptions and Limitations}
 \addcontentsline{toc}{section}{Design Assumptions and Limitations}
 \label{sec:assumptions-summary}
