@@ -76,3 +76,75 @@ def ur_chart(rows: Sequence[URRow], path: str) -> Optional[str]:
     except Exception as exc:       # a chart must never break the report
         logger.warning("UR chart not drawn: %s", exc)
         return None
+
+
+# ---------------------------------------------------------------------------
+# Material quantity charts (chapter 7)
+# ---------------------------------------------------------------------------
+
+STEEL_ITEMS = (
+    ("Girders", "steel_girders"), ("Bracing: top chord", "bracing_top"),
+    ("Bracing: bottom chord", "bracing_bot"), ("Bracing: diagonals", "bracing_diag"),
+    ("End diaphragms", "end_diaphragm"), ("Shear studs", "shear_studs"),
+)
+CONCRETE_ITEMS = (("Deck slab", "concrete_deck"), ("Crash barrier", "crash_barrier"))
+
+
+def _items(q: dict, spec, suffix: str):
+    return [(label, q.get(f"{key}_{suffix}_num")) for label, key in spec]
+
+
+def _hbar(ax, items, unit: str, fmt: str = "{:.2f}", color: str = T.CHART_BAR_COLOR) -> None:
+    top = max([v for _, v in items if v is not None] + [1e-9]) * 1.18
+    ys = list(range(len(items)))
+    for y, (_, v) in zip(ys, items):
+        if v is None:
+            ax.text(0.01 * top, y, "N.A.", va="center", ha="left", fontsize=T.CHART_FONT_SIZE - 1,
+                    color=T.hex_color(T.CHART_NA_COLOR), style="italic")
+        else:
+            ax.barh(y, v, height=0.6, color=T.hex_color(color), zorder=3)
+            ax.text(v + 0.01 * top, y, fmt.format(v), va="center", ha="left", fontsize=T.CHART_FONT_SIZE - 1)
+    ax.set_yticks(ys)
+    ax.set_yticklabels([lbl for lbl, _ in items])
+    ax.set_ylim(len(items) - 0.4, -0.6)
+    ax.set_xlim(0, top)
+    ax.set_xlabel(unit)
+    ax.grid(axis="y", visible=False)
+
+
+def steel_tonnage_figure(q: dict) -> Figure:
+    """Structural steel weight (MT) per member group; missing items read N.A., not zero."""
+    items = _items(q, STEEL_ITEMS, "wt_total")
+    with rc_context(T.mpl_rc()):
+        h = ROW_HEIGHT_IN * len(items) + 0.9
+        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, h))
+        _hbar(fig.add_subplot(111), items, "Weight (MT)")
+        fig.subplots_adjust(left=0.27, right=0.96, top=0.97, bottom=0.8 / h)
+        return fig
+
+
+def concrete_rebar_figure(q: dict) -> Figure:
+    """Concrete volume (m3) and reinforcement weight (MT) side by side (different units)."""
+    conc = _items(q, CONCRETE_ITEMS, "vol_total")
+    rebar = [("Deck reinforcement", q.get("rebar_deck_wt_total_num"))]
+    with rc_context(T.mpl_rc()):
+        h = ROW_HEIGHT_IN * 2 + 1.1
+        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, h))
+        a1, a2 = fig.subplots(1, 2, gridspec_kw={"width_ratios": [3, 2]})
+        _hbar(a1, conc, "Concrete volume (m³)")
+        _hbar(a2, rebar, "Reinforcement weight (MT)", color=T.PRIMARY)
+        fig.subplots_adjust(left=0.17, right=0.97, top=0.96, bottom=0.8 / h * 1.15, wspace=0.75)
+        return fig
+
+
+def quantity_charts(q: dict, out_dir: str) -> dict:
+    """Write both quantity charts into ``out_dir``; returns {name: filename} for those drawn."""
+    import os
+    made = {}
+    for name, make in (("steel_chart", steel_tonnage_figure), ("concrete_chart", concrete_rebar_figure)):
+        try:
+            save_pdf(make(q), os.path.join(out_dir, name + ".pdf"))
+            made[name] = name + ".pdf"
+        except Exception as exc:
+            logger.warning("%s not drawn: %s", name, exc)
+    return made

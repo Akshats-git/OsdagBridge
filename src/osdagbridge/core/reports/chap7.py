@@ -40,7 +40,8 @@ def _grade(input_dict, key, default):
     return str(v).strip() if v not in (None, "") else default
 
 
-def ch7_quantities(input_dict):
+def ch7_quantities(input_dict, fig_paths=None):
+    fig_paths = fig_paths or {}
     names = {"girder": _grade(input_dict, KEY_GIRDER, "IS 2062"),
              "concrete": _grade(input_dict, KEY_DECK_CONCRETE_GRADE_BASIC, "concrete"),
              "rebar": _grade(input_dict, KEY_DS_REINF_MATERIAL, "Fe 500")}
@@ -57,4 +58,6 @@ def ch7_quantities(input_dict):
     return r"""
 \chapter{Material Take-off \& Quantity Summary}
 \label{ch:material-takeoff}
-""" + table + K.note(M(NOTE), small=False)
+""" + (table + K.note(M(NOTE), small=False)
+        + K.figure(fig_paths.get("steel_chart"), "Structural steel quantities by member group (MT)")
+        + K.figure(fig_paths.get("concrete_chart"), "Concrete volume and reinforcement weight"))

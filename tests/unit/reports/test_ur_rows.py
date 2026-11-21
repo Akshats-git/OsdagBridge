@@ -95,3 +95,14 @@ def test_charts_never_import_pyplot():
     src = (REPORTS / "charts.py").read_text(encoding="utf-8")
     code = "\n".join(l for l in src.splitlines() if re.match(r"\s*(import|from)\s", l) or "(" in l)
     assert not re.search(r"import\s+.*pyplot|from\s+\S*pyplot|matplotlib\.use\(|rcParams\.update\(", code)
+
+
+def test_quantity_charts_draw_values_and_na(tmp_path):
+    from osdagbridge.core.reports import charts
+    q = {"steel_girders_wt_total_num": 32.89, "bracing_top_wt_total_num": 0.11, "end_diaphragm_wt_total_num": None,
+         "concrete_deck_vol_total_num": 63.0, "crash_barrier_vol_total_num": None, "rebar_deck_wt_total_num": 7.56}
+    steel = [t.get_text() for t in charts.steel_tonnage_figure(q).axes[0].texts]
+    assert "32.89" in steel and steel.count("N.A.") == 4          # ED + 3 groups without data
+    made = charts.quantity_charts(q, str(tmp_path))
+    assert set(made) == {"steel_chart", "concrete_chart"}
+    assert all((tmp_path / f).read_bytes().startswith(b"%PDF") for f in made.values())
