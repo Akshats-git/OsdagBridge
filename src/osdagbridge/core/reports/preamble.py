@@ -5,6 +5,8 @@ turns those constants into LaTeX.
 """
 from __future__ import annotations
 
+import re
+
 from osdagbridge.core.reports import theme as T
 from osdagbridge.core.reports.report_utils import _tex
 
@@ -19,6 +21,11 @@ def _unicode_declarations() -> str:
     return "\n".join(
         r"\DeclareUnicodeCharacter{%04X}{%s}" % (cp, repl) for cp, repl in T.UNICODE_MAP
     )
+
+
+def _pdf_safe(text) -> str:
+    """Plain text for PDF metadata: drop characters LaTeX would treat as markup."""
+    return re.sub(r"[\\{}%#&_$^~]", "", str(text or "")).strip()
 
 
 def build_preamble(project_name, job_number, report_date, report_version="Rev 0") -> str:
@@ -53,6 +60,10 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \usepackage{etoolbox}
 \usepackage{needspace}
 \usepackage{ragged2e}
+<<microtype>>
+
+% ---- PDF metadata (theme.PDF_*) ---------------------------------------------
+\hypersetup{pdftitle={<<pdftitle>>}, pdfauthor={<<pdfauthor>>}, pdfsubject={<<pdfsubject>>}}
 
 % ---- Characters pdflatex does not know by default (theme.UNICODE_MAP) -------
 <<unicode>>
@@ -166,6 +177,9 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
         "sdnote": T.SD_NOTE, "footer_left": T.FOOTER_LEFT, "footer_right": T.FOOTER_RIGHT,
         "rulew": T.RULE_THICKNESS_PT, "linestretch": T.LINE_STRETCH,
         "chapter_before": T.CHAPTER_BEFORE_PT, "emergency": T.EMERGENCY_STRETCH,
+        "microtype": r"\usepackage[protrusion=true,expansion=false]{microtype}" if T.MICROTYPE else "",
+        "pdftitle": f"{_pdf_safe(project_name)} - {T.PDF_TITLE_SUFFIX}", "pdfauthor": T.PDF_AUTHOR,
+        "pdfsubject": T.PDF_SUBJECT,
         "pn": pn, "jn": jn, "rd": rd, "rv": rv,
     }
     for key, val in values.items():
