@@ -143,6 +143,7 @@ from osdagbridge.core.utils.common import (
 
 from osdagbridge.core.reports import latex_kit as K
 from osdagbridge.core.reports import theme as T
+from osdagbridge.core.reports import report_data as D
 from osdagbridge.core.reports.latex_kit import Col, Span
 from osdagbridge.core.reports.report_utils import get_girder_entries, val
 
@@ -209,7 +210,7 @@ def _ur_cell(v):
 PAIR = [Col("Girder", 0.13, "c")]   # leading label column of per-girder tables
 
 
-def ch5_design_checks(checks_data, bridge) -> str:
+def ch5_design_checks(checks_data, bridge, fig_paths=None) -> str:
     """Chapter 5 — Design Checks.
 
     Parameters
@@ -239,7 +240,7 @@ This section presents all structural design checks performed by OsdagBridge. For
     out.append(_deck_section(bridge, od, idc))
     out.append(_cross_bracing_section(bridge, od))
     out.append(_end_diaphragm_section(bridge, od))
-    out.append(_overall_summary(bridge, od, idc))
+    out.append(_overall_summary(bridge, od, idc, fig_paths or {}))
     return "".join(out)
 
 
@@ -832,185 +833,73 @@ Cross bracing between adjacent plate girders provides lateral stability during c
 
 
 def _end_diaphragm_section(bridge, od):
-    return (r"""
+    intro = r"""
 \section{End Diaphragm Design}
 \label{sec:end-diaphragm}
 
 End diaphragms at the supports transfer transverse loads to the bearings, restrain the bottom flanges against lateral displacement, and maintain the girder cross-section geometry during construction and in service. They are designed per IS~800:2007 and IRC~24:2010 Cl.~507.
-""" + _brace_tables(bridge, od, "End Diaphragm"))
+"""
+    ed = D.end_diaphragm_results(od)
+    if not ed.has_results():
+        ed_type = D.end_diaphragm_type(bridge.input_dict)
+        if "brac" in ed_type.lower():
+            why = "Design results are not available for the selected bracing-type end diaphragms."
+        elif ed_type:
+            why = ("The selected end diaphragm type (%s) is not designed in this version, "
+                   "so no results are reported." % ed_type)
+        else:
+            why = "No end diaphragm type was selected, so no end diaphragm design was performed."
+        return intro + "\n\\noindent " + why + "\n"
+    rows, groups = [], []
+    for pair in ed.pairs():
+        for member, label in (("diagonal", "Diagonal"), ("chord", "Chord")):
+            best = None
+            for ft in ("compression", "tension"):
+                sm = ed.summary(pair, member, ft)
+                ur = D._float(sm.get("efficiency"))
+                if ur is not None and (best is None or ur > best[0]):
+                    best = (ur, ft, sm)
+            if best is None:
+                rows.append((pair, label, None, None, None, None, None, None))
+            else:
+                ur, ft, sm = best
+                cap = D._float(sm.get("capacity_kN"))
+                rows.append((pair, label, sm.get("section"), ed.gov_lc(pair, member, ft),
+                             _num(cap * ur) if cap else None, _num(cap, 3), _ur_cell(ur),
+                             K.pass_fail("PASS" if T.ur_passes(ur) else "FAIL")))
+        groups.append(2)
+    table = K.data_table(
+        [Col("Panel", 0.12, "c"), Col("Member", 0.12), Col("Section", 0.14, "c"), Col("Governing LC", 0.17, "c"),
+         Col("Demand (kN)", 0.13, "c"), Col("Capacity (kN)", 0.14, "c"), Col("UR", 0.08, "c"),
+         Col("Status", 0.10, "c")],
+        rows, caption="End Diaphragm Design --- Capacity Summary", groups=groups, compact=True)
+    return intro + table + K.note(M(_NOTE_CAP), small=False)
 
 
 # ---------------------------------------------------------------------------
 # 5.5  Overall summary
 # ---------------------------------------------------------------------------
 
-def _overall_summary(bridge, od, idc):
-    rpt = od.get("deck_report_values", {}) or {}
-    has = bool(rpt)
-    has_oh = bool(rpt.get(KEY_DD_HAS_OVERHANG))
-    pg = (od.get("design_results", {}) or {}).get("per_girder", {}) or {}
+def _ur_row_cells(r):
+    """Table cells for one URRow; a message row spans the data columns."""
+    if r.message:
+        return (r.label, Span(4, r.message, "c"))
+    if not r.applicable and r.demand == "N/A":
+        return (r.label, r.gov_lc, "N/A", "N/A", "N/A")
+    return (r.label, r.gov_lc, r.demand, r.capacity, _ur_cell(r.ur))
 
-    def dkv(key, default=0.0):
-        v = rpt.get(key)
-        try:
-            return float(v) if v not in (None, "") else default
-        except (TypeError, ValueError):
-            return default
 
-    def vu(v, unit):
-        s = _num(v)
-        if s is None:
-            return None
-        u = (unit or "").strip()
-        return (s + " " + u) if u else s
-
-    def gov_lc(g, check_ids):
-        best = None
-        for lc, ld in (pg.get(g) or {}).get("per_lc", {}).items():
-            if str(lc).lower().startswith("envelope"):
-                continue
-            for chk in ld.get("checks") or []:
-                if chk.get("id") in check_ids:
-                    d = chk.get("dcr") or 0.0
-                    if best is None or d > best[0]:
-                        best = (d, lc)
-        return str(best[1]).strip() if best else None
-
-    def dcr_row(check_ids, fallback_unit=""):
-        best = None
-        for g, gd in pg.items():
-            if str(g).startswith("EB"):
-                continue
-            for chk in gd.get("checks") or []:
-                if chk.get("check_id") in check_ids:
-                    d = chk.get("dcr") or 0.0
-                    if best is None or d > best[0]:
-                        best = (d, chk.get("demand"), chk.get("capacity"),
-                                chk.get("demand_unit") or "", chk.get("capacity_unit") or "", g)
-        if best is not None:
-            d, dem, cap, du, cu, g = best
-            return (gov_lc(g, check_ids), vu(dem, du), vu(cap, cu), _ur_cell(d))
-        best = None                                   # per-LC fallback (no units), e.g. deflection
-        for g, gd in pg.items():
-            if str(g).startswith("EB"):
-                continue
-            for lc, ld in (gd.get("per_lc") or {}).items():
-                if str(lc).lower().startswith("envelope"):
-                    continue
-                for chk in ld.get("checks") or []:
-                    if chk.get("id") in check_ids:
-                        d = chk.get("dcr") or 0.0
-                        if best is None or d > best[0]:
-                            best = (d, chk.get("demand"), chk.get("capacity"), lc)
-        if best is None:
-            return (None, None, None, None)
-        d, dem, cap, lc = best
-        return (str(lc).strip(), vu(dem, fallback_unit), vu(cap, fallback_unit), _ur_cell(d))
-
-    pairs = bridge.get_cb_pairs()
-
-    def cb_row(force_type):
-        best = None
-        for pair in pairs:
-            for member in ("diagonal", "chord"):
-                cap = bridge.get_cb_capacity(pair, member, force_type)
-                try:
-                    ur = float(bridge.get_cb_efficiency(pair, member, force_type))
-                except (TypeError, ValueError):
-                    continue
-                if best is None or ur > best[0]:
-                    best = (ur, pair, member, cap)
-        if best is None:
-            return (None, None, None, None)
-        ur, pair, member, cap = best
-        return (bridge.get_cb_gov_lc(pair, member, force_type) or None,
-                f"{float(cap) * ur:.2f} kN" if cap else None, (cap + " kN") if cap else None, _ur_cell(ur))
-
-    def cb_slender_row():
-        best = None
-        for pair in pairs:
-            for member in ("diagonal", "chord"):
-                try:
-                    sf = float(bridge.get_cb_slenderness(pair, member))
-                except (TypeError, ValueError):
-                    continue
-                lim = 400.0 if member == "chord" else 250.0
-                if best is None or sf / lim > best[0]:
-                    best = (sf / lim, sf, lim)
-        if best is None:
-            return (None, None, None, None)
-        ratio, sf, lim = best
-        return (None, f"{sf:.1f}", f"{lim:.0f}", _ur_cell(ratio))
-
-    combo = (f"Basic ULS: {dkv(KEY_DD_GAMMA_DL):g}DL + {dkv(KEY_DD_GAMMA_LL):g}LL") if has else None
-
-    def deck_row(dem_key, cap_key, unit, is_oh=False):
-        if not has:
-            return (None,) * 4
-        if is_oh and not has_oh:
-            return (combo, "N/A", "N/A", "N/A")
-        dem, cap = dkv(dem_key), dkv(cap_key)
-        return (combo, f"{dem:.2f} {unit}", f"{cap:.2f} {unit}", _ur_cell(dem / cap) if cap > 0 else None)
-
-    def gov_sls_frequent():
-        best = None
-        for g, gd in pg.items():
-            if str(g).startswith("EB"):
-                continue
-            for lc, ld in (gd.get("per_lc") or {}).items():
-                if "frequent" not in str(lc).lower():
-                    continue
-                d = ld.get("max_dcr") or 0.0
-                if best is None or d > best[0]:
-                    best = (d, lc)
-        return str(best[1]).strip() if best else "Frequent SLS"
-
-    wks = [dkv(KEY_DD_WK_BOT), dkv(KEY_DD_WK_TOP)] + ([dkv(KEY_DD_WK_OH)] if has_oh else [])
-    gov_wk, wk_lim = max(wks), dkv(KEY_DD_WK_LIMIT)
-    crack = ((gov_sls_frequent() if has else None), (f"{gov_wk:.3f} mm" if has else None),
-             (f"{wk_lim:.3f} mm" if has else None), (_ur_cell(gov_wk / wk_lim) if (has and wk_lim > 0) else None))
-
-    # End diaphragm: bracing-type diaphragms mirror the bracing axial rows; beam-type
-    # diaphragm design is not implemented -> one message across the data columns.
-    ed_type = ""
-    for k, v in bridge.input_dict.items():
-        if str(k).startswith(KEY_MP_ED_TYPE) and v:
-            ed_type = str(v)
-            break
-    if "brac" in ed_type.strip().lower():
-        ed_moment = ("End Diaphragm --- Moment",) + cb_row("compression")
-        ed_shear = ("End Diaphragm --- Shear",) + cb_row("tension")
-    else:
-        msg = Span(4, "Rolled / Welded section --- design to be added", "c")
-        ed_moment, ed_shear = ("End Diaphragm --- Moment", msg), ("End Diaphragm --- Shear", msg)
-
-    rows = [
-        ("Girder --- Moment",) + dcr_row({1}),
-        ("Girder --- Shear",) + dcr_row({2}),
-        ("Girder --- LTB (constr.)",) + dcr_row({5}),
-        ("Girder --- Deflection",) + dcr_row({13, 14}, "mm"),
-        ("Girder --- Stress",) + dcr_row({11}, "MPa"),
-        ("Girder --- Fatigue",) + dcr_row({8, 9}, "MPa"),
-        ("Transverse Shear (slab)",) + dcr_row({16}),
-        ("Crack Width (slab)",) + crack,
-        ("Deck --- Flexure (sagging)",) + deck_row(KEY_DD_M_ULS_SAG, KEY_DD_MU_BOT, "kN-m/m"),
-        ("Deck --- Flexure (hogging)",) + deck_row(KEY_DD_M_ULS_HOG, KEY_DD_MU_TOP, "kN-m/m"),
-        ("Deck --- Cantilever Overhang",) + deck_row(KEY_DD_M_ULS_OH, KEY_DD_MU_OH, "kN-m/m", is_oh=True),
-        ("Deck --- Punching Shear",) + deck_row(KEY_DD_PUNCH_VED, KEY_DD_VRD_C_MPA, "MPa"),
-        ("Deck --- One-Way Shear",) + deck_row(KEY_DD_SHEAR_VED, KEY_DD_SHEAR_VRDC, "kN/m"),
-        ("Cross Bracing --- Compression",) + cb_row("compression"),
-        ("Cross Bracing --- Tension",) + cb_row("tension"),
-        ("Cross Bracing --- Slenderness",) + cb_slender_row(),
-        ed_moment,
-        ed_shear,
-    ]
+def _overall_summary(bridge, od, idc, fig_paths):
+    rows = D.collect_ur_rows(idc, od)
     return (r"""
 \section{Overall Design Check Summary}
 \label{sec:overall-summary}
 """ + K.data_table(
         [Col("Member / Check", 0.23, "c"), Col("Governing Load Combo", 0.31), Col("Demand", 0.17, "c"),
          Col("Capacity", 0.17, "c"), Col("UR", 0.12, "c")],
-        rows, caption="Overall Design Check Summary --- All Members", compact=True)
-        + K.note(M(r"Note: UR = Demand / Capacity. All values $\leq 1.0$ indicate passing checks. The governing check "
+        [_ur_row_cells(r) for r in rows], caption="Overall Design Check Summary --- All Members", compact=True)
+        + K.note(M(r"Note: UR = Demand / Capacity. A check passes when UR $\leq 1.0$. Checks without a result "
+                   r"are shown as a dash and are not counted as passing. The governing check "
                    r"for each component is highlighted in the individual design check sections above."),
-                 small=False))
+                 small=False) + K.figure(fig_paths.get("ur_chart"), "Utilisation ratio of every design check (limit = 1.0)",
+                    max_height=T.FIGURE_TALL_HEIGHT))

@@ -73,6 +73,7 @@ TABLE_WIDTH_FRACTION = 1.0
 NEEDSPACE_HEADING_LINES = 6      # keep a heading with at least this many lines
 NEEDSPACE_TABLE_LINES = 6        # start a table only if this many lines fit
 FIGURE_MAX_HEIGHT = r"0.42\textheight"
+FIGURE_TALL_HEIGHT = r"0.62\textheight"   # tall charts (e.g. the UR chart)
 FIGURE_FULL_WIDTH = r"\linewidth"
 FIGURE_ROW_WIDTH = 0.31          # share of \linewidth for each of three side-by-side figures
 SECTION_GAP_PT = 6.0
