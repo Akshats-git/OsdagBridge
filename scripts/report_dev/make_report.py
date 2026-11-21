@@ -39,7 +39,7 @@ ALL_SECTIONS = [
 ]
 
 
-def _request(out_dir: str, stem: str):
+def _request(out_dir: str, stem: str, sections=None):
     from osdagbridge.core.reports.report_generator import (
         ReportMetadata, ReportOptions, ReportRequest,
     )
@@ -57,7 +57,7 @@ def _request(out_dir: str, stem: str):
         logo_path=None,
         report_date=datetime.date.today().isoformat(),
     )
-    opts = ReportOptions(sections=list(ALL_SECTIONS), include_figures=True,
+    opts = ReportOptions(sections=list(sections or ALL_SECTIONS), include_figures=True,
                          include_toc=True, include_pdf=True)
     return ReportRequest(metadata=md, options=opts,
                          output_dir=os.path.abspath(out_dir), file_stem=stem)
@@ -157,11 +157,11 @@ def save_snapshot(snap: dict, path: str) -> None:
     print(f"[harness] snapshot -> {path}")
 
 
-def make_report(snap: dict, out_dir: str, stem: str) -> None:
+def make_report(snap: dict, out_dir: str, stem: str, sections=None) -> None:
     from osdagbridge.core.reports.report_generator import build_report_payload, generate_report
 
     os.environ["OSDAGBRIDGE_KEEP_LATEX_LOG"] = "1"      # keep the real build log next to the PDF
-    req = _request(out_dir, stem)
+    req = _request(out_dir, stem, sections)
     payload = build_report_payload(req, dict(snap["input_dict"]), dict(snap["output_dict"]))
     t0 = time.time()
     result = generate_report(payload, req)
@@ -212,6 +212,7 @@ def main() -> None:
     ap.add_argument("--save-snapshot", help="where to write the snapshot (with --osi)")
     ap.add_argument("--no-gui-parity", action="store_true",
                     help="skip the GUI Design-time compute step (see gui_parity)")
+    ap.add_argument("--sections", help="comma-separated section keys to include (default: all)")
     args = ap.parse_args()
 
     if args.osi:
@@ -222,7 +223,7 @@ def main() -> None:
         with open(args.snapshot, "rb") as fh:
             snap = pickle.load(fh)
 
-    make_report(snap, args.out, args.stem)
+    make_report(snap, args.out, args.stem, args.sections.split(",") if args.sections else None)
 
 
 if __name__ == "__main__":
