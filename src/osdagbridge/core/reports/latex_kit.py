@@ -59,7 +59,9 @@ def esc(value) -> NoEscape:
     s = str(value)
     for uni, ascii_ in _ASCII_FALLBACK:
         s = s.replace(uni, ascii_)
-    s = escape_latex(s).replace(r"\_", r"\_\allowbreak{}").replace(":", r":\allowbreak{}")
+    # PyLaTeX wraps '-' as '{-}' which kills the -- and --- ligatures used in titles.
+    s = escape_latex(s).replace("{-}", "-")
+    s = s.replace(r"\_", r"\_\allowbreak{}").replace(":", r":\allowbreak{}")
     return NoEscape(s)
 
 

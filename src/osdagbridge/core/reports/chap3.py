@@ -53,7 +53,9 @@ from osdagbridge.core.utils.common import (
     KEY_WL_VERTICAL_WIND_FORCE
 )
 
-from osdagbridge.core.reports.report_utils import _tex, _render_value
+from osdagbridge.core.reports import latex_kit as K
+from osdagbridge.core.reports.latex_kit import Col
+from osdagbridge.core.reports.report_utils import val
 
 def ch3_loads(input_dict):
     # Live load vehicle names mapping
@@ -252,145 +254,78 @@ def ch3_loads(input_dict):
     sls_combos = IRC6_2017.sls_load_combinations()
     lc_rows = []
     for i, combo in enumerate(uls_combos, start=1):
-        cases = _fmt_factors(combo['factors'])
-        lc_rows.append(
-            f"ULS-{i:02d}" + r" & " + cases + r" \\[6pt]" + "\n"
-            + r"\hline"
-        )
+        lc_rows.append((f"ULS-{i:02d}", _fmt_factors(combo['factors'])))
     for i, combo in enumerate(sls_combos, start=1):
-        cases = _fmt_factors(combo['factors'])
-        lc_rows.append(
-            f"SLS-{i:02d}" + r" & " + cases + r" \\[6pt]" + "\n"
-            + r"\hline"
-        )
+        lc_rows.append((f"SLS-{i:02d}", _fmt_factors(combo['factors'])))
 
-    lc_rows_str = "\n".join(lc_rows)
+    d = input_dict
+    P = ("Parameter", "Value")
+    sup3 = K.raw(r" kN/m\textsuperscript{3}")
+    sup2_kn = K.raw(r" kN/m\textsuperscript{2}")
+    sup2_n = K.raw(r" N/m\textsuperscript{2}")
+    deg_c = K.raw(r" $^\circ$C")
 
-    return r"""
+    parts = [r"""
 \chapter{Loads and Load Combinations}
 
 This section summarizes all loads applied to the bridge and the load combinations considered for analysis and design.
+"""]
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Dead Load -- Self Weight}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Steel Self-Weight Applied} & """ + (_render_value(input_dict, KEY_MATERIAL_GIRDER_DENSITY, ' kN/m\\textsuperscript{3}')) + r""" \\[6pt]
-\hline
-\textnormal{Concrete Deck Weight} & """ + (_render_value(input_dict, KEY_MATERIAL_DECK_DENSITY, ' kN/m\\textsuperscript{3}')) + r""" \\[6pt]
-\hline
-\textnormal{Self-Weight Factor} & """ + (_render_value(input_dict, KEY_PL_SELF_WEIGHT_FACTOR)) + r""" \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Steel Self-Weight Applied", K.join(val(d, KEY_MATERIAL_GIRDER_DENSITY), sup3)),
+        ("Concrete Deck Weight", K.join(val(d, KEY_MATERIAL_DECK_DENSITY), sup3)),
+        ("Self-Weight Factor", val(d, KEY_PL_SELF_WEIGHT_FACTOR)),
+    ], caption="Dead Load -- Self Weight", header=P))
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Dead Load for Surfacing (DW)}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Wearing Course Load} & """ + (_render_value(input_dict, KEY_WC_MATERIAL)) + r""" x """ + (_render_value(input_dict, KEY_WC_THICKNESS)) + r""" \\[6pt]
-\hline
-\textnormal{Additional SIDL (Crash Barrier)} & """ + (_render_value(input_dict, KEY_CB_LOAD)) + r""" kN/m per barrier \\[6pt]
-\hline
-\textnormal{Railing Load} & """ + (_render_value(input_dict, KEY_RL_LOAD_VALUE)) + r""" kN/m\sdstar{} \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Wearing Course Load", K.join(val(d, KEY_WC_MATERIAL), " x ", val(d, KEY_WC_THICKNESS))),
+        ("Additional SIDL (Crash Barrier)", K.join(val(d, KEY_CB_LOAD), " kN/m per barrier")),
+        ("Railing Load", K.join(val(d, KEY_RL_LOAD_VALUE), K.raw(r" kN/m\sdstar{}"))),
+    ], caption="Dead Load for Surfacing (DW)", header=P))
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Live Loads (LL)}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Vehicles Considered} & """ + _tex(vehicles_str) + r""" \\[6pt]
-\hline
-\textnormal{Impact Factor (IRC 6)} & """ + _tex(impact_factor_str) + r""" \\[6pt]
-\hline
-\textnormal{Braking Load (IRC 6)} & """ + _tex(braking_force_str) + r""" \\[6pt]
-\hline
-\textnormal{Footpath Live Load (if applicable)} & """ + (_render_value(input_dict, KEY_LL_FOOTPATH_PRESSURE_VALUE, ' kN/m\\textsuperscript{2}')) + r""" \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Vehicles Considered", vehicles_str),
+        ("Impact Factor (IRC 6)", impact_factor_str),
+        ("Braking Load (IRC 6)", braking_force_str),
+        ("Footpath Live Load (if applicable)", K.join(val(d, KEY_LL_FOOTPATH_PRESSURE_VALUE), sup2_kn)),
+    ], caption="Live Loads (LL)", header=P))
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Wind Load (WL) --- per IRC 6}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Basic Wind Speed, Vb} & """ + (_render_value(input_dict,'wind_speed', ' m/s')) + r""" [from Project Location] \\[6pt]
-\hline
-\textnormal{Terrain Type} & """ + (_render_value(input_dict, KEY_WL_TERRAIN_TYPE)) + r""" \\[6pt]
-\hline
-\textnormal{Average Exposed Height, H (m)} & """ + (_render_value(input_dict, KEY_WL_AVG_EXPOSED_HEIGHT, ' m')) + r""" \\[6pt]
-\hline
-\textnormal{Hourly Mean Wind Speed, Vz} & """ + (_render_value(input_dict, KEY_WL_HOURLY_MEAN_WIND, ' m/s')) + r""" \\[6pt]
-\hline
-\textnormal{Hourly Wind Pressure, Pz} & """ + (_render_value(input_dict, KEY_WL_HOURLY_WIND_PRESSURE, ' N/m\\textsuperscript{2}')) + r""" \\[6pt]
-\hline
-\textnormal{Transverse Wind Force} & """ + (_render_value(input_dict, KEY_WL_TRANSVERSE_WIND_FORCE, ' kN')) + r""" \\[6pt]
-\hline
-\textnormal{Longitudinal Wind Force} & """ + (_render_value(input_dict, KEY_WL_LONGITUDINAL_WIND_FORCE, ' kN')) + r""" \\[6pt]
-\hline
-\textnormal{Vertical Wind Force} & """ + (_render_value(input_dict, KEY_WL_VERTICAL_WIND_FORCE, ' kN')) + r""" \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Basic Wind Speed, Vb", K.join(val(d, "wind_speed", " m/s"), " [from Project Location]")),
+        ("Terrain Type", val(d, KEY_WL_TERRAIN_TYPE)),
+        ("Average Exposed Height, H (m)", val(d, KEY_WL_AVG_EXPOSED_HEIGHT, " m")),
+        ("Hourly Mean Wind Speed, Vz", val(d, KEY_WL_HOURLY_MEAN_WIND, " m/s")),
+        ("Hourly Wind Pressure, Pz", K.join(val(d, KEY_WL_HOURLY_WIND_PRESSURE), sup2_n)),
+        ("Transverse Wind Force", val(d, KEY_WL_TRANSVERSE_WIND_FORCE, " kN")),
+        ("Longitudinal Wind Force", val(d, KEY_WL_LONGITUDINAL_WIND_FORCE, " kN")),
+        ("Vertical Wind Force", val(d, KEY_WL_VERTICAL_WIND_FORCE, " kN")),
+    ], caption="Wind Load (WL) --- per IRC 6", header=P))
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Earthquake Load (EL) --- per IRC 6}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Seismic Zone} & """ + (_render_value(input_dict,'seismic_zone')) + r""" [from Project Location] \\[6pt]
-\hline
-\textnormal{Zone Factor, Z} & """ + (_render_value(input_dict, KEY_SL_ZONE_FACTOR)) + r""" \\[6pt]
-\hline
-\textnormal{Importance Factor, I} & """ + (_render_value(input_dict, KEY_SL_IMPORTANCE_FACTOR)) + r""" \\[6pt]
-\hline
-\textnormal{Type of Soil} & """ + (_render_value(input_dict, KEY_SL_SOIL_TYPE)) + r""" \\[6pt]
-\hline
-\textnormal{Sa/g} & """ + (_render_value(input_dict, KEY_SL_SPECTRAL_COEFF)) + r""" \\[6pt]
-\hline
-\textnormal{Horizontal Seismic Coefficient, Ah} & """ + (_render_value(input_dict, KEY_SL_HORIZONTAL_COEFF)) + r""" \\[6pt]
-\hline
-\textnormal{Vertical Seismic Coefficient, Av} & """ + (_render_value(input_dict, KEY_SL_VERTICAL_COEFF)) + r""" \\[6pt]
-\hline
-\textnormal{Horizontal Seismic Force (longitudinal)} & """ + '' + r""" kN \\[6pt]
-\hline
-\textnormal{Horizontal Seismic Force (transverse)} & """ + '' + r""" kN \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Seismic Zone", K.join(val(d, "seismic_zone"), " [from Project Location]")),
+        ("Zone Factor, Z", val(d, KEY_SL_ZONE_FACTOR)),
+        ("Importance Factor, I", val(d, KEY_SL_IMPORTANCE_FACTOR)),
+        ("Type of Soil", val(d, KEY_SL_SOIL_TYPE)),
+        ("Sa/g", val(d, KEY_SL_SPECTRAL_COEFF)),
+        ("Horizontal Seismic Coefficient, Ah", val(d, KEY_SL_HORIZONTAL_COEFF)),
+        ("Vertical Seismic Coefficient, Av", val(d, KEY_SL_VERTICAL_COEFF)),
+        ("Horizontal Seismic Force (longitudinal)", K.na("not computed in this version")),
+        ("Horizontal Seismic Force (transverse)", K.na("not computed in this version")),
+    ], caption="Earthquake Load (EL) --- per IRC 6", header=P))
 
-\vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Temperature Load (TL) --- per IRC 6}}
-\hline
-\textbf{parameter} & \textbf{value} \\
-\hline
-\textnormal{Maximum Shade Temperature} & """ + (_render_value(input_dict,'shade_temp_max')) + r""" $^\circ$C \\[6pt]
-\hline
-\textnormal{Minimum Shade Temperature} & """ + (_render_value(input_dict,'shade_temp_min')) + r""" $^\circ$C \\[6pt]
-\hline
-\textnormal{Effective Bridge Temp. Range} & """ + (_render_value(input_dict, KEY_TL_BRIDGE_TEMP_MIN)) + r""" to """ + (_render_value(input_dict, KEY_TL_BRIDGE_TEMP_MAX)) + r""" $^\circ$C \\[6pt]
-\hline
-\textnormal{Temperature Rise / Fall for Design} & +""" + (_render_value(input_dict, KEY_TL_TEMP_RISE)) + r""" $^\circ$C / \textminus{}""" + (_render_value(input_dict, KEY_TL_TEMP_FALL)) + r""" $^\circ$C \\[6pt]
-\hline
-\end{longtable}
+    parts.append(K.kv_table([
+        ("Maximum Shade Temperature", K.join(val(d, "shade_temp_max"), deg_c)),
+        ("Minimum Shade Temperature", K.join(val(d, "shade_temp_min"), deg_c)),
+        ("Effective Bridge Temp. Range",
+         K.join(val(d, KEY_TL_BRIDGE_TEMP_MIN), " to ", val(d, KEY_TL_BRIDGE_TEMP_MAX), deg_c)),
+        ("Temperature Rise / Fall for Design",
+         K.join("+", val(d, KEY_TL_TEMP_RISE), deg_c, K.raw(r" / \textminus{}"),
+                val(d, KEY_TL_TEMP_FALL), deg_c)),
+    ], caption="Temperature Load (TL) --- per IRC 6", header=P))
 
-\vspace{1em}
-\begin{longtable}{|C{4.0cm}|p{11.5cm}|}
-\caption{\textbf{Load Combinations}}
-\hline
-\textbf{Combination ID} & \textbf{Load Cases} \\[6pt]
-\hline
-""" + lc_rows_str + r"""
-\end{longtable}
-
-\noindent\textit{Note: All IRC 6 load combinations are auto-generated by OsdagBridge. User-defined custom combinations, if any, are appended.}
-"""
-
-
+    parts.append(K.data_table(
+        [Col("Combination ID", 0.26, "c"), Col("Load Cases", 0.74)],
+        lc_rows, caption="Load Combinations"))
+    parts.append(K.note("Note: All IRC 6 load combinations are auto-generated by OsdagBridge. "
+                        "User-defined custom combinations, if any, are appended.", small=False))
+    return "".join(parts)

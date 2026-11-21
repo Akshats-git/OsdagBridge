@@ -19,6 +19,10 @@ def test_escape_plain_text_and_passthrough():
     assert "∠" not in str(K.esc("∠ 100"))
 
 
+def test_dashes_keep_their_ligatures():
+    assert str(K.esc("A --- B -- C")) == "A --- B -- C"
+
+
 def test_missing_is_never_zero():
     tex = K.data_table(_cols(), [("x", None, "")])
     assert T.MISSING in tex
