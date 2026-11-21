@@ -63,6 +63,15 @@ def esc(value) -> NoEscape:
     return NoEscape(s)
 
 
+def join(*parts) -> NoEscape:
+    """Concatenate text and LaTeX pieces: plain strings are escaped, ``NoEscape`` kept.
+
+    A ``None`` part (value not available) renders as ``theme.MISSING`` in its
+    place, so "12.0 mm" never degrades to " mm" or "0".
+    """
+    return NoEscape("".join(str(esc(p)) for p in parts))
+
+
 def raw(latex: str) -> NoEscape:
     """Mark a string as LaTeX that must not be escaped (e.g. ``$b_f$``)."""
     return NoEscape(latex)
@@ -100,7 +109,9 @@ def note(text, small: bool = True) -> str:
 
 
 def keep_with_next(lines: int = T.NEEDSPACE_HEADING_LINES) -> str:
-    return r"\needspace{%d\baselineskip}" % lines + "\n"
+    # Needspace* (not needspace): a plain \needspace right after a longtable
+    # makes longtable print a stray foot and a duplicate empty first page.
+    return r"\Needspace*{%d\baselineskip}" % lines + "\n"
 
 
 def section_gap() -> str:
@@ -276,7 +287,8 @@ def data_table(
     body = table.dumps()
     if size:
         body = "{" + size + "\n" + body + "\n}"
-    return "\n" + body + "\n" + after + "\n"
+    # Keep the caption and header together with the first rows.
+    return "\n" + keep_with_next(T.NEEDSPACE_TABLE_LINES) + body + "\n" + after + "\n"
 
 
 def kv_table(

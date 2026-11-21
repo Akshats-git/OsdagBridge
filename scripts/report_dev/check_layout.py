@@ -137,11 +137,20 @@ def check_orphan_headings(pdf_path: str) -> list[dict]:
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
 
+_NOISE_RE = re.compile(r"Page \d+ of \d+|(?:Table|Figure|Chapter)\s+\d+(?:\.\d+)*[a-z]?")
+
+
 def _numbers(pdf_path: str) -> Counter:
+    """Numeric tokens in the body text, ignoring layout-dependent numbers:
+    the table of contents, "Page x of y" and "Table x.y" / "Figure n" labels
+    (these shift whenever pagination or table numbering changes)."""
     c = Counter()
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            c.update(NUM_RE.findall(page.extract_text() or ""))
+            text = page.extract_text() or ""
+            if "Table of Contents" in text:
+                continue
+            c.update(NUM_RE.findall(_NOISE_RE.sub(" ", text)))
     return c
 
 

@@ -32,6 +32,18 @@ def _render_value(source_dict, key, unit=""):
     return _tex(val) + unit
 
 
+def val(source_dict, key, unit=""):
+    """Plain (unescaped) value for the kit, or None when absent.
+
+    Unlike ``_render_value`` this does not escape: ``latex_kit`` cells escape
+    plain text themselves, so values must reach it raw.
+    """
+    v = source_dict.get(key)
+    if v in ("", None):
+        return None
+    return f"{v}{unit}"
+
+
 def get_girder_entries(input_dict):
     """
     Retrieve all girder labels and member IDs from backend keys.

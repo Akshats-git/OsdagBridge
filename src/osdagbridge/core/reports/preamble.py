@@ -81,15 +81,13 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \newcommand{\urna}[1]{\textcolor{urNA}{#1}}
 
 % Keep a heading together with the lines that follow it
-\newcommand{\keepwithnext}[1][<<needspace_h>>]{\needspace{#1\baselineskip}}
+\newcommand{\keepwithnext}[1][<<needspace_h>>]{\Needspace*{#1\baselineskip}}
 \let\osdagorigsection\section
 \let\osdagorigsubsection\subsection
 \let\osdagorigsubsubsection\subsubsection
 \renewcommand{\section}{\keepwithnext\osdagorigsection}
 \renewcommand{\subsection}{\keepwithnext\osdagorigsubsection}
 \renewcommand{\subsubsection}{\keepwithnext\osdagorigsubsubsection}
-\BeforeBeginEnvironment{table}{\needspace{<<needspace_t>>\baselineskip}}
-\BeforeBeginEnvironment{longtable}{\needspace{<<needspace_t>>\baselineskip}}
 \raggedbottom
 
 % ---- Header and footer ------------------------------------------------------
