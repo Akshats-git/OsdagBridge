@@ -31,6 +31,83 @@ def resolve_girder_value(source: dict, base_key: str, i: int = 0) -> Any:
     raise KeyError(base_key)
 
 
+STEEL_DENSITY_T_M3 = 7.85      # t/m3 (7850 kg/m3)
+
+
+def _barrier_area_m2(raw) -> float:
+    """Crash-barrier cross-section area in m2 from a value of unknown unit.
+
+    The GUI stores m2 (0.3023) while the core defaults store mm2 (302 282.768).
+    A barrier is 0.05-1 m2, so values up to 10 are m2 and values from 10 000 up are
+    mm2; anything in between is ambiguous and returns 0.0 (reported as N.A.).
+    """
+    try:
+        a = float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+    if 0.0 < a <= 10.0:
+        return a
+    if a >= 10000.0:
+        return a / 1e6
+    return 0.0
+
+
+def _ed_quantities(q: dict, inputs: dict, outputs: dict) -> None:
+    """Fill the end diaphragm row from the section properties the designer stores."""
+    import re
+    pfx = "transverse_member_design.ed.section_properties.end_diaphragm."
+    pairs = sorted({m.group(1) for k in outputs for m in [re.match(re.escape(pfx) + r"(G\d+G\d+)\.A$", str(k))] if m})
+    type_pfx = "member_properties.end_diaphragm_details.type."
+
+    def is_beam(pair):                           # bracing-type "L" is a leg size, not a length
+        for src in (outputs, inputs):
+            for k, v in src.items():
+                if str(k).startswith(type_pfx + pair) and str(v).strip() in ("Rolled Beam", "Welded Beam"):
+                    return True
+        return False
+
+    items = []                                   # (area m2, length m) per pair
+    for pair in pairs:
+        if not is_beam(pair):
+            continue
+        try:
+            a_cm2 = float(outputs.get(f"{pfx}{pair}.A"))
+            length = float(outputs.get(f"{pfx}{pair}.L"))
+        except (TypeError, ValueError):
+            continue
+        if a_cm2 > 0 and length > 0:
+            items.append((a_cm2 / 1e4, length))
+    if not items:
+        return
+    per_pair = 2                                  # one diaphragm at each support
+    total_qty = per_pair * len(items)
+    total_vol = sum(per_pair * a * ln for a, ln in items)
+    total_wt = total_vol * STEEL_DENSITY_T_M3
+    a0, l0 = items[0]
+    same = all(abs(a - a0) < 1e-9 and abs(ln - l0) < 1e-9 for a, ln in items)
+    q["end_diaphragm_vol_formula"] = (
+        f"${a0:.5f}\\text{{ m}}^2 \\times {l0:.2f}\\text{{ m}} = {a0 * l0:.5f}\\text{{ m}}^3$" if same
+        else "Varies by bay")
+    q["end_diaphragm_qty"] = str(total_qty)
+    q["end_diaphragm_vol_total"] = f"{total_vol:.2f}"
+    q["end_diaphragm_wt_single"] = f"{total_wt / total_qty:.4f}"
+    q["end_diaphragm_wt_total"] = f"{total_wt:.2f}"
+
+
+def _as_float(text):
+    try:
+        return float(text)
+    except (TypeError, ValueError):
+        return None
+
+
+def _add_numeric_companions(q: dict) -> dict:
+    """``<row>_vol_total_num`` / ``<row>_wt_total_num``: floats (None for N.A.) for charts."""
+    for key in [k for k in q if k.endswith("_vol_total") or k.endswith("_wt_total")]:
+        q[key + "_num"] = _as_float(q[key])
+    return q
+
+
 def calculate_material_quantities(inputs: dict, outputs: dict) -> dict:
     """Calculate quantities (steel tonnage, concrete volume, rebar, studs)
     needed for the material take-off summary (Chapter 7).
@@ -66,6 +143,12 @@ def calculate_material_quantities(inputs: dict, outputs: dict) -> dict:
         "bracing_diag_wt_single": "N.A.",
         "bracing_diag_wt_total": "N.A.",
         
+        "end_diaphragm_vol_formula": "N.A.",
+        "end_diaphragm_qty": "N.A.",
+        "end_diaphragm_vol_total": "N.A.",
+        "end_diaphragm_wt_single": "N.A.",
+        "end_diaphragm_wt_total": "N.A.",
+
         "concrete_deck_vol_formula": r"\placeholder{Width $\times$ Thickness $\times$ Length}",
         "concrete_deck_qty": "N.A.",
         "concrete_deck_vol_total": "N.A.",
@@ -94,16 +177,16 @@ def calculate_material_quantities(inputs: dict, outputs: dict) -> dict:
         span_val = inputs.get(KEY_SPAN)
         n_girders_val = inputs.get(KEY_TS_NO_OF_GIRDERS)
         if span_val is None or n_girders_val is None:
-            return quantities
+            return _add_numeric_companions(quantities)
             
         try:
             span = float(span_val)
             n_girders = int(n_girders_val)
         except Exception:
-            return quantities
+            return _add_numeric_companions(quantities)
 
         if span <= 0 or n_girders <= 0:
-            return quantities
+            return _add_numeric_companions(quantities)
 
         # 1. Concrete deck volume (Cu.m) and Weight (MT)
         overall_width_val = inputs.get("typical_section.overall_bridge_width")
@@ -330,16 +413,18 @@ def calculate_material_quantities(inputs: dict, outputs: dict) -> dict:
                 quantities[f"{prefix}_wt_single"] = "N.A."
                 quantities[f"{prefix}_wt_total"] = "N.A."
 
+        # 5d. End diaphragms (beam type: Rolled / Welded): two per bay, one at each support.
+        # Bracing-type end diaphragms need member lengths the designer does not store, so
+        # they stay "N.A." rather than being estimated.
+        _ed_quantities(quantities, inputs, outputs)
+
         # 6. Crash Barrier (Cu.m) and Weight (MT)
         KEY_CB_AREA = "typical_section.crash_barrier.area"
         cb_area = 0.0
         cb_area_val = inputs.get(KEY_CB_AREA)
         
         if cb_area_val is not None:
-            try:
-                cb_area = float(cb_area_val) / 1e6
-            except Exception:
-                pass
+            cb_area = _barrier_area_m2(cb_area_val)
         
         if cb_area > 0.0:
             cb_vol = cb_area * span
@@ -363,4 +448,4 @@ def calculate_material_quantities(inputs: dict, outputs: dict) -> dict:
     except Exception as exc:
         logger.warning(f"Error calculating material quantities: {exc}")
 
-    return quantities
+    return _add_numeric_companions(quantities)
