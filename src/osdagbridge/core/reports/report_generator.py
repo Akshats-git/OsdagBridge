@@ -160,7 +160,8 @@ def title_page(m, osdag_logo, org_logo):
     else:
         rhs = r''
 
-    logos_tex = r"""\noindent
+    if org_logo:
+        logos_tex = r"""\noindent
 \begin{minipage}[c]{0.6\textwidth}
 \raggedright
 """ + lhs + r"""
@@ -169,6 +170,13 @@ def title_page(m, osdag_logo, org_logo):
 \begin{minipage}[c]{0.35\textwidth}
 \raggedleft
 """ + rhs + r"""
+\end{minipage}
+\\[1cm]
+"""
+    else:                       # no organisation logo available: centre the Osdag logo, no empty column
+        logos_tex = r"""\begin{minipage}[c]{0.5\textwidth}
+\centering
+""" + lhs + r"""
 \end{minipage}
 \\[1cm]
 """
@@ -852,7 +860,21 @@ def generate_report(payload, request):
                     logger.error("Full LaTeX log saved to %s", log_path)
 
             if os.path.exists(tmp_tex):
-                shutil.copy2(tmp_tex, tex_path)
+                # The saved .tex must rebuild on its own: ship the images/ and assets/ it
+                # refers to in <stem>_files/ and point the saved copy at them (F30).
+                bundle = os.path.join(request.output_dir, request.file_stem + '_files')
+                try:
+                    for sub in ('images', 'assets'):
+                        src = os.path.join(tmp_dir, sub)
+                        if os.path.isdir(src) and os.listdir(src):
+                            shutil.copytree(src, os.path.join(bundle, sub), dirs_exist_ok=True)
+                    rel = request.file_stem + '_files/'
+                    saved = full_tex.replace('{images/', '{' + rel + 'images/').replace('{assets/', '{' + rel + 'assets/')
+                    with open(tex_path, 'w', encoding='utf-8') as fh:
+                        fh.write(saved)
+                except OSError as exc:
+                    logger.warning("Could not export report sources: %s", exc)
+                    shutil.copy2(tmp_tex, tex_path)
             if os.path.exists(tmp_pdf):
                 shutil.copy2(tmp_pdf, pdf_path)
 
