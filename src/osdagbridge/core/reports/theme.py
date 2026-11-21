@@ -137,6 +137,7 @@ UNICODE_MAP = (
     (0x2192, r"\ensuremath{\rightarrow}"),
     (0x2248, r"\ensuremath{\approx}"),
     (0x00B1, r"\ensuremath{\pm}"),
+    (0x2020, r"\textdagger{}"),
 )
 
 # ---------------------------------------------------------------------------
