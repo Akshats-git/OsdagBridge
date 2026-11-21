@@ -58,7 +58,7 @@ def _max_member_efficiency(pair_designs):
     return best
 
 
-def executive_summary(input_dict, output_dict, fig_paths) -> str:
+def executive_summary(input_dict, output_dict, fig_paths, has_checks_chapter=True) -> str:
     plan_fig = K.figure(fig_paths.get('girder_top'), 'Figure 1 -- Overall Bridge Plan')
     cs_fig = K.figure(fig_paths.get('cross_section'),
                       'Figure 2 -- Typical Cross-Section (with girder, deck, barriers, footpath)')
@@ -171,6 +171,7 @@ def executive_summary(input_dict, output_dict, fig_paths) -> str:
          for el, (v, mx) in D.element_verdicts(ur_rows).items()],
         caption="Design Verdict by Element", numbered=False)
 
+    where = (r" (Section~\ref{sec:overall-summary})" if has_checks_chapter else "")
     return r"""
 \newpage
 {\centering\Large\bfseries Executive Summary\par}
@@ -188,7 +189,7 @@ This section provides a concise summary of the bridge design, key inputs, govern
 \addcontentsline{toc}{section}{Key Design Outcomes Summary}
 \label{sec:key-outcomes}
 
-\noindent Verdicts come from the same utilisation-ratio rows as the Overall Design Check Summary table and chart in Section~\ref{sec:overall-summary}: an element passes when its largest UR is $\leq 1.0$, and an element with no design result is reported as n/a, never as a pass.
+\noindent Verdicts come from the same utilisation-ratio rows as the design checks""" + where + r""": an element passes when its largest UR is $\leq 1.0$, and an element with no design result is reported as n/a, never as a pass.
 """ + verdicts + r"""
 \section*{Design Assumptions and Limitations}
 \addcontentsline{toc}{section}{Design Assumptions and Limitations}
