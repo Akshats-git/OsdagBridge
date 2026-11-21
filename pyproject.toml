@@ -63,6 +63,11 @@ dev = [
   "pytest>=6.2.2",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+  "slow: runs the full design pipeline and compiles a report (about 20 s per scenario)",
+]
+
 # Package data
 [tool.setuptools.package-data]
 osdagbridge = [
