@@ -52,6 +52,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \usepackage{makecell}
 \usepackage{etoolbox}
 \usepackage{needspace}
+\usepackage{ragged2e}
 
 % ---- Characters pdflatex does not know by default (theme.UNICODE_MAP) -------
 <<unicode>>
@@ -78,6 +79,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \setlength{\extrarowheight}{<<extra>>pt}
 \newcommand{\urpass}[1]{\textcolor{urPass}{\textbf{#1}}}
 \newcommand{\urfail}[1]{\textcolor{urFail}{\textbf{#1}}}
+\newcommand{\urwarn}[1]{\textcolor{urWarn}{\textbf{#1}}}
 \newcommand{\urna}[1]{\textcolor{urNA}{#1}}
 
 % Keep a heading together with the lines that follow it
@@ -100,7 +102,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 
 \newcommand{\osdagfooterleft}{%
   \begin{tabular}[b]{@{}l@{}}%
-    \ifbool{hasSDonPage}{{\footnotesize\textit{<<sdnote>>}}\\}{}%
+    {\footnotesize\ifbool{hasSDonPage}{\textit{<<sdnote>>}}{\phantom{<<sdnote>>}}}\\%
     <<footer_left>>
   \end{tabular}}
 \renewcommand{\headrulewidth}{<<rulew>>pt}

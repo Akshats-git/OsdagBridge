@@ -33,9 +33,10 @@ from osdagbridge.core.reports import theme as T
 Cell = Union[str, int, float, None, NoEscape]
 
 _ALIGN_CMD = {
-    "l": r">{\raggedright\arraybackslash}",
-    "c": r">{\centering\arraybackslash}",
-    "r": r">{\raggedleft\arraybackslash}",
+    # ragged2e variants keep hyphenation on, so long words wrap in narrow columns
+    "l": r">{\RaggedRight\arraybackslash}",
+    "c": r">{\Centering\arraybackslash}",
+    "r": r">{\RaggedLeft\arraybackslash}",
 }
 
 # Same normalisation the old _tex() did for glyphs pdflatex cannot print.
@@ -79,14 +80,28 @@ def raw(latex: str) -> NoEscape:
     return NoEscape(latex)
 
 
-def pass_fail(text: str) -> NoEscape:
-    """'PASS' / 'FAIL' (case-insensitive) in the theme colours; anything else as n/a."""
-    t = str(text).strip().upper()
-    if t == "PASS":
+def pass_fail(text) -> NoEscape:
+    """Status text in the theme colours.
+
+    PASS/WARN/FAIL (case-insensitive) are coloured; "N/A" renders as n/a; ``None``
+    or an empty value renders as the missing-value dash; free text containing
+    FAIL (e.g. "Fail (fatigue)") is shown in the FAIL colour.
+    """
+    if text is None or str(text).strip() in ("", "---"):
+        return NoEscape(T.MISSING)
+    t = str(text).strip()
+    u = t.upper()
+    if u == "PASS":
         return NoEscape(r"\urpass{PASS}")
-    if t == "FAIL":
+    if u == "WARN":
+        return NoEscape(r"\urwarn{WARN}")
+    if u == "FAIL":
         return NoEscape(r"\urfail{FAIL}")
-    return na()
+    if u in ("N/A", "NA"):
+        return na("N/A")
+    if "FAIL" in u:
+        return NoEscape(r"\urfail{%s}" % esc(t))
+    return esc(t)
 
 
 def status(ur: Optional[float]) -> NoEscape:
@@ -156,8 +171,30 @@ def column_spec(columns: Sequence[Col], width_fraction: float = T.TABLE_WIDTH_FR
     return "|" + "|".join(parts) + "|"
 
 
+@dataclass(frozen=True)
+class Span:
+    """A cell that spans several columns (e.g. a section sub-heading row)."""
+    n: int
+    content: Cell
+    align: str = "l"
+
+
+def _row_width(cells: Sequence[Cell]) -> int:
+    return sum(c.n if isinstance(c, Span) else 1 for c in cells)
+
+
 def _cells(cells: Iterable[Cell]) -> str:
-    return " & ".join(str(esc(c)) for c in cells)
+    out, col = [], 0
+    for c in cells:
+        if isinstance(c, Span):
+            # vertical rules: the first column also needs the left border
+            spec = ("|%s|" if col == 0 else "%s|") % c.align
+            out.append(MultiColumn(c.n, align=spec, data=esc(c.content)).dumps().rstrip("%\n "))
+            col += c.n
+        else:
+            out.append(str(esc(c)))
+            col += 1
+    return " & ".join(out)
 
 
 def _caption_block(caption: Optional[str], label: Optional[str], continued: bool) -> str:
@@ -192,8 +229,10 @@ def _header_rows(columns: Sequence[Col], header_groups) -> str:
         out.append(" ".join(rules))
         out.append(" & ".join(c.rstrip("%\n ") for c in cells) + r" \\*")
         out.append(" ".join(rules))
-    head = " & ".join(r"\textbf{%s}" % esc(c.title) if T.HEADER_BOLD else str(esc(c.title))
-                      for c in columns)
+    def _h(c):
+        txt = r"\textbf{%s}" % esc(c.title) if T.HEADER_BOLD else str(esc(c.title))
+        return (r"{%s %s}" % (T.HEADER_SIZE, txt)) if T.HEADER_SIZE else txt
+    head = " & ".join(_h(c) for c in columns)
     if T.TABLE_HEAD_FILL:
         head = r"\rowcolor[HTML]{%s} " % T.TABLE_HEAD_FILL + head
     out.append(r"\hline")
@@ -235,7 +274,7 @@ def data_table(
     """
     n = len(columns)
     for r in rows:
-        if len(r) != n:
+        if _row_width(r) != n:
             raise ValueError(f"row has {len(r)} cells, table has {n} columns: {r!r}")
     if groups is not None and sum(groups) != len(rows):
         raise ValueError("group sizes must add up to the number of rows")

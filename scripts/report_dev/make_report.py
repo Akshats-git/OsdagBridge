@@ -160,6 +160,7 @@ def save_snapshot(snap: dict, path: str) -> None:
 def make_report(snap: dict, out_dir: str, stem: str) -> None:
     from osdagbridge.core.reports.report_generator import build_report_payload, generate_report
 
+    os.environ["OSDAGBRIDGE_KEEP_LATEX_LOG"] = "1"      # keep the real build log next to the PDF
     req = _request(out_dir, stem)
     payload = build_report_payload(req, dict(snap["input_dict"]), dict(snap["output_dict"]))
     t0 = time.time()
@@ -169,7 +170,8 @@ def make_report(snap: dict, out_dir: str, stem: str) -> None:
     print(f"[harness] tex: {result.tex_path}")
     if not result.pdf_path:
         raise SystemExit(1)
-    _write_log(result.tex_path, out_dir)
+    if not os.path.exists(os.path.join(out_dir, stem + ".log")):
+        _write_log(result.tex_path, out_dir)
 
 
 def _write_log(tex_path: str, out_dir: str) -> None:

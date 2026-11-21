@@ -21,7 +21,7 @@ BASE_FONT_PT = 12
 MARGIN = "1in"
 HEADHEIGHT = "16pt"          # fancyhdr needs >= the header line height + rule
 HEADSEP = "14pt"
-FOOTSKIP = "32pt"            # room for the footer rule, note line and text
+FOOTSKIP = "36pt"            # room for the footer rule, note line and text
 LINE_STRETCH = 1.15          # \setstretch
 CHAPTER_BEFORE_PT = -30.0    # \titlespacing before a chapter title
 
@@ -31,6 +31,7 @@ CHAPTER_BEFORE_PT = -30.0    # \titlespacing before a chapter title
 PRIMARY = "91B014"           # Osdag green: rules, header/footer rules
 PASS_COLOR = "1B7F3B"
 FAIL_COLOR = "C0392B"
+WARN_COLOR = "B7791F"
 NA_COLOR = "6B7280"
 TEXT_COLOR = "000000"
 TABLE_HEAD_FILL = None       # e.g. "EEF4D6" for a tinted header row (None = no fill)
@@ -41,6 +42,7 @@ LATEX_COLORS = {
     "osdagGreen": PRIMARY,
     "urPass": PASS_COLOR,
     "urFail": FAIL_COLOR,
+    "urWarn": WARN_COLOR,
     "urNA": NA_COLOR,
 }
 
@@ -53,10 +55,11 @@ ARRAYRULE_PT = 0.5
 EXTRAROWHEIGHT_PT = 0.6
 COMPACT_TABCOLSEP_PT = 3.0   # for dense numeric tables (compact=True in the kit)
 COMPACT_SIZE = r"\footnotesize"
-LT_PRE_PT = 0.0              # \LTpre
+LT_PRE_PT = 6.0              # \LTpre
 LT_POST_PT = 8.0             # \LTpost
 CAPTION_SKIP_PT = 4.0        # \abovecaptionskip / \belowcaptionskip
 HEADER_BOLD = True
+HEADER_SIZE = r"\small"      # header row font size (keeps narrow columns from overflowing)
 CONTINUED_TEXT = "(continued)"
 CONTINUES_TEXT = "Continued on next page"
 

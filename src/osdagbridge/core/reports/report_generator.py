@@ -397,7 +397,7 @@ class ReportDataBridge:
     def get_cb_section(self, pair: str, member: str, force_type: str) -> str:
         """Section designation for a member e.g. '75 x 75 x 8'."""
         val = self._cb_osdag(pair, member, force_type).get("section")
-        return _tex(val) if val else ""
+        return str(val) if val else ""
 
     def get_cb_capacity(self, pair: str, member: str, force_type: str) -> str:
         """Capacity in kN."""
@@ -419,14 +419,13 @@ class ReportDataBridge:
         return ""
 
     def get_cb_status(self, pair: str, member: str, force_type: str) -> str:
-        """PASS / FAIL based on UR <= 1.0."""
+        """Plain 'PASS' / 'FAIL' (theme UR rule) or '' when no result."""
         try:
             val = self._cb_osdag(pair, member, force_type).get("efficiency")
             if val is not None:
                 ur = float(val)
-                if ur <= 1.0:
-                    return r"\textcolor{black}{PASS}"
-                return r"\textcolor{red}{FAIL}"
+                from osdagbridge.core.reports.theme import ur_passes
+                return "PASS" if ur_passes(ur) else "FAIL"
         except (TypeError, ValueError):
             pass
         return ""
@@ -437,7 +436,7 @@ class ReportDataBridge:
             pfx = "diag" if member == "diagonal" else "chord"
             key = f"{pfx}_{force_type}_gov_lc"
             val = self._cb_forces_dict()["pairs"][pair].get(key)
-            return _tex(val) if val else ""
+            return str(val) if val else ""
         except (KeyError, TypeError):
             return ""
 
@@ -830,6 +829,9 @@ def generate_report(payload, request):
                     log_text = fh.read()
             error_lines = [ln for ln in log_text.splitlines() if ln.startswith('!')]
             n_errors = len(error_lines)
+            keep_log = bool(os.environ.get('OSDAGBRIDGE_KEEP_LATEX_LOG'))   # dev/CI: always keep
+            if keep_log and log_text:
+                shutil.copy2(tmp_log, log_path)
             if last_rc not in (0, None) or n_errors:
                 # nonstopmode hides errors from the user: surface and keep the log.
                 logger.error("pdflatex finished with exit code %s and %d error(s):\n%s",

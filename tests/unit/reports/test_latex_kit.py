@@ -132,3 +132,13 @@ def test_groups_never_split_across_pages(compile_tex):
                 continue
             assert data[0][-2] == "P0" or data[0][0].startswith("P0") or data[0][1] == "P0", data[0]
             assert data[-1][0] == "P5" or data[-1][1] == "P5", data[-1]
+
+
+def test_span_cells_and_status_text():
+    cols = [Col("A", 0.4), Col("B", 0.3), Col("C", 0.3)]
+    tex = K.data_table(cols, [(K.Span(3, K.bold("Section")),), ("x", "y", "z")])
+    assert r"\multicolumn{3}{|l|}" in tex
+    with pytest.raises(ValueError):
+        K.data_table(cols, [(K.Span(2, "bad"),)])
+    assert "urwarn" in str(K.pass_fail("WARN")) and "urfail" in str(K.pass_fail("Fail (fatigue)"))
+    assert str(K.pass_fail(None)) == T.MISSING
