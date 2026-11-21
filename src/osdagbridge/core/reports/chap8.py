@@ -1,5 +1,8 @@
 from typing import List
 
+from osdagbridge.core.reports import latex_kit as K
+from osdagbridge.core.reports.latex_kit import Col
+
 from osdagbridge.core.utils.common import (
     KEY_DESIGN_MODE
 )
@@ -53,53 +56,25 @@ design modules, and notes the limitations of the current software version.
 The following Indian Road Congress (IRC) codes and Indian Standards (IS) 
 form the basis of all design calculations in this software.
 
-\vspace{0.5cm}
-
-\begingroup
-\setlength{\tabcolsep}{3.5pt}
-\begin{table}[H]
-\caption{\textbf{IRC Codes}}
-\begin{tabular}{|c|c|p{13cm}|}
-\hline
-\textbf{Code} & \textbf{Year} & \textbf{Title / Scope} \\ 
-\hline
-IRC 5 & 2015 & General Features of Design - carriageway widths, kerb, footpath dimensions \\ 
-\hline
-IRC 6 & 2017 & Loads and Load Combinations - dead load, live load, impact, wind, temperature, etc. \\ 
-\hline
-IRC 22 & 2015 & Composite Construction (LS) - Composite section properties, ULS/SLS design, shear connectors \\ 
-\hline
-IRC 24 & 2010 & Steel Road Bridges (LS) - Stiffener design, skew angle limits, diaphragm requirements \\ 
-\hline
-IRC 112 & 2020 & Concrete Road Bridges - Deck slab flexure, shear, crack width, reinforcement \\ 
-\hline
-IRC SP 114 & 2018 & Seismic Design of Road Bridges \\ 
-\hline
-\end{tabular}
-\end{table}
-
-\begingroup
-\setlength{\tabcolsep}{3.5pt}
-\begin{table}[H]
-\caption{\textbf{IS Codes}}
-\begin{tabular}{|c|c|p{13cm}|}
-\hline
-\textbf{Code} & \textbf{Year} & \textbf{Scope} \\
-\hline
-IS 800 & 2007 & Steel construction - tension, compression, bending, shear, LTB, stiffeners, combined checks \\
-\hline
-IS 456 & 2000 & Concrete - simplified stress-block for deck moment capacity \\
-\hline
-IS 1786 & 2008 & Reinforcement steel properties \\
-\hline
-IS 1893 (Part 3) & 2014 & Earthquake resistant design \\
-\hline
-IS 2062 & 2011 & Structural steel - yield and ultimate strength by grade \\
-\hline
-\end{tabular}
-\end{table}
-
-\clearpage
+"""
+        + K.data_table(
+            [Col("Code", 0.14, "c"), Col("Year", 0.09, "c"), Col("Title / Scope", 0.77)],
+            [("IRC 5", "2015", "General Features of Design - carriageway widths, kerb, footpath dimensions"),
+             ("IRC 6", "2017", "Loads and Load Combinations - dead load, live load, impact, wind, temperature, etc."),
+             ("IRC 22", "2015", "Composite Construction (LS) - Composite section properties, ULS/SLS design, shear connectors"),
+             ("IRC 24", "2010", "Steel Road Bridges (LS) - Stiffener design, skew angle limits, diaphragm requirements"),
+             ("IRC 112", "2020", "Concrete Road Bridges - Deck slab flexure, shear, crack width, reinforcement"),
+             ("IRC SP 114", "2018", "Seismic Design of Road Bridges")],
+            caption="IRC Codes")
+        + K.data_table(
+            [Col("Code", 0.14, "c"), Col("Year", 0.09, "c"), Col("Scope", 0.77)],
+            [("IS 800", "2007", "Steel construction - tension, compression, bending, shear, LTB, stiffeners, combined checks"),
+             ("IS 456", "2000", "Concrete - simplified stress-block for deck moment capacity"),
+             ("IS 1786", "2008", "Reinforcement steel properties"),
+             ("IS 1893 (Part 3)", "2014", "Earthquake resistant design"),
+             ("IS 2062", "2011", "Structural steel - yield and ultimate strength by grade")],
+            caption="IS Codes")
+        + r"""
 \section{Analysis and Design Assumptions of This Version}
 \label{sec:assumptions}
 

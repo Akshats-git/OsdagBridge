@@ -91,6 +91,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \renewcommand{\subsection}{\keepwithnext\osdagorigsubsection}
 \renewcommand{\subsubsection}{\keepwithnext\osdagorigsubsubsection}
 \raggedbottom
+\setlength{\emergencystretch}{<<emergency>>}
 
 % ---- Header and footer ------------------------------------------------------
 \newcommand{\sdstar}{\textsuperscript{*}}
@@ -164,7 +165,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
         "needspace_h": T.NEEDSPACE_HEADING_LINES, "needspace_t": T.NEEDSPACE_TABLE_LINES,
         "sdnote": T.SD_NOTE, "footer_left": T.FOOTER_LEFT, "footer_right": T.FOOTER_RIGHT,
         "rulew": T.RULE_THICKNESS_PT, "linestretch": T.LINE_STRETCH,
-        "chapter_before": T.CHAPTER_BEFORE_PT,
+        "chapter_before": T.CHAPTER_BEFORE_PT, "emergency": T.EMERGENCY_STRETCH,
         "pn": pn, "jn": jn, "rd": rd, "rv": rv,
     }
     for key, val in values.items():

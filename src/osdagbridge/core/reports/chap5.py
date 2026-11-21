@@ -249,7 +249,7 @@ This section presents all structural design checks performed by OsdagBridge. For
 
 def _girder_tables(od, idc, entries):
     t = []
-    g3 = [Col("Girder", 0.10, "c"), Col("Parameter", 0.33), Col("Formula", 0.25),
+    g3 = [Col("Girder", 0.115, "c"), Col("Parameter", 0.315), Col("Formula", 0.25),
           Col("Value", 0.20, "c"), Col("Status", 0.12, "c")]
 
     # Table 5.1 — section properties
@@ -329,7 +329,7 @@ def _girder_tables(od, idc, entries):
         (M(r"Interaction Check: $M_u \leq M_{dv}$"), None, _num(mv), K.pass_fail(mv_st)),
         (M(r"Interaction Check: $N_u/N_{Rd} + M_u/M_{dv} \leq 1.0$"), mn_cond, mn_val, K.pass_fail(mn_st)),
     ])
-    t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Check", 0.35), Col("Condition", 0.25),
+    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Check", 0.335), Col("Condition", 0.25),
                            Col("Value", 0.18, "c"), Col("Status", 0.12, "c")],
                           rows, caption="Interaction Checks (M-V and M-N)", groups=groups))
     t.append(K.note("Note: IRC 22 Cl. 603.3.3.3", small=False))
@@ -369,7 +369,7 @@ def _girder_tables(od, idc, entries):
             (M(r"Buckling Resistance, $F_{qd} \geq F_q$"), _with(val(od, KEY_SD_IS_FQ), "kN"),
              _with(val(od, KEY_SD_IS_FQD), "kN"), K.pass_fail(fqd)),
         ])
-        t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Check", 0.32), Col("Required", 0.20, "c"),
+        t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Check", 0.305), Col("Required", 0.20, "c"),
                                Col("Provided", 0.26, "c"), Col("Status", 0.12, "c")],
                               rows, caption="Intermediate Stiffener Checks", groups=groups))
         t.append(K.note("Note: IS 800 Cl. 8.7.1.2", small=False))
@@ -388,7 +388,7 @@ def _girder_tables(od, idc, entries):
              ("Bearing Capacity", KEY_SD_BS_FPSD), ("Column Buckling Resistance", KEY_SD_BS_FCD)]
     rows, groups = _grouped(entries, lambda lbl, gi: [
         (nm, bs[k][0], bs[k][1], K.pass_fail(bs[k][2])) for nm, k in names])
-    t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Check", 0.32), Col("Required", 0.20, "c"),
+    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Check", 0.305), Col("Required", 0.20, "c"),
                            Col("Provided", 0.26, "c"), Col("Status", 0.12, "c")],
                           rows, caption="End Panel Stiffener Checks", groups=groups))
     t.append(K.note("Note: IS 800 Cl. 8.4.2.2", small=False))
@@ -412,7 +412,7 @@ def _girder_tables(od, idc, entries):
              K.pass_fail(_le(allow_total, total) if allow_total is not None and total is not None else None)),
         ]
     rows, groups = _grouped(entries, _defl_rows)
-    t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Check", 0.34), Col("Allowable", 0.20, "c"),
+    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Check", 0.325), Col("Allowable", 0.20, "c"),
                            Col("Actual", 0.24, "c"), Col("Status", 0.12, "c")],
                           rows, caption="Serviceability -- Deflection Checks", groups=groups))
     t.append(K.note("Note: IRC 22 Cl. 604.3.2", small=False))
@@ -422,7 +422,7 @@ def _girder_tables(od, idc, entries):
     sig, allow = dr.get(KEY_SD_STRESS_STEEL), dr.get(KEY_SD_STRESS_STEEL_ALLOWABLE)
     stress_rows = [(lbl, M(r"Structural Steel ($0.9\,f_y$)"), _with(_num(allow), "MPa"),
                     _with(_num(sig), "MPa"), K.pass_fail(_le(allow, sig))) for lbl, _ in entries]
-    t.append(K.data_table([Col("Girder", 0.10, "c"), Col("Element", 0.30), Col("Allowable Stress", 0.22, "c"),
+    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Element", 0.285), Col("Allowable Stress", 0.22, "c"),
                            Col("Actual Stress", 0.26, "c"), Col("Status", 0.12, "c")],
                           stress_rows, caption="Serviceability -- Maximum Stress Limitation"))
 
@@ -472,7 +472,7 @@ def _girder_tables(od, idc, entries):
                      _unit(ctrl.get("demand"), ctrl.get("demand_unit")),
                      _unit(ctrl.get("capacity"), ctrl.get("capacity_unit")),
                      _num(ctrl.get("dcr"), 3), K.pass_fail(ctrl.get("status"))))
-    t.append(K.data_table([Col("Girder", 0.11, "c"), Col("Controlling LC / Combination", 0.23, "c"),
+    t.append(K.data_table([Col("Girder", 0.115, "c"), Col("Controlling LC / Combination", 0.225, "c"),
                            Col("Controlling Check", 0.15, "c"), Col("Demand", 0.15, "c"),
                            Col("Capacity", 0.16, "c"), Col("UR", 0.10, "c"), Col("Status", 0.10, "c")],
                           summ, caption="Girder Design Summary (DCR / Utilization Ratio)", compact=True))

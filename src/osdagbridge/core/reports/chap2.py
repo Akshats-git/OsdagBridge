@@ -210,9 +210,9 @@ def _girder_tables(d, n_girders):
              Col(K.raw(r"Bottom Flange (b\textsubscript{bf}, t\textsubscript{bf}) mm"), 0.295)],
             dim_rows, caption="Girder Section Dimensions")
         + K.data_table(
-            [Col("Girder", 0.09), Col("Torsional / Warping Restraint", 0.15), Col("Web Philosophy", 0.15),
+            [Col("Girder", 0.115), Col("Torsional / Warping Restraint", 0.15), Col("Web Philosophy", 0.15),
              Col("Intermediate Stiffeners", 0.22), Col("Longitudinal Stiffeners", 0.20),
-             Col("Bearing Stiffener", 0.19)],
+             Col("Bearing Stiffener", 0.165)],
             rst_rows, caption="Girder Restraint and Stiffener Details", compact=True)
     )
 
