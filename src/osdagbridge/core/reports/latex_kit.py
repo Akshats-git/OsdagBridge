@@ -318,7 +318,7 @@ def data_table(
         if label_col_blank:
             cells[0] = NoEscape("")
         fill = ""
-        if T.TABLE_ZEBRA_FILL and i % 2 == 1:
+        if T.TABLE_ZEBRA_FILL and not groups and i % 2 == 1: # grouped tables are already structured by their group rules
             fill = r"\rowcolor[HTML]{%s} " % T.TABLE_ZEBRA_FILL
         line = fill + _cells(cells)
         if in_group:
