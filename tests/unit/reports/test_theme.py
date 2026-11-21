@@ -31,3 +31,13 @@ def test_unicode_map_has_unique_codepoints():
 def test_mpl_rc_is_a_plain_dict_and_does_not_pick_a_backend():
     rc = T.mpl_rc()
     assert isinstance(rc, dict) and "backend" not in rc
+
+
+def test_preamble_is_built_from_theme():
+    from osdagbridge.core.reports.preamble import build_preamble
+    tex = build_preamble("P", "J", "2026-01-01", "Rev 0")
+    assert "<<" not in tex, "unfilled template token"
+    assert T.PRIMARY in tex
+    assert f"headheight={T.HEADHEIGHT}" in tex
+    assert tex.count(r"\titleformat{\chapter}") == 1
+    assert r"\DeclareUnicodeCharacter{2264}" in tex
