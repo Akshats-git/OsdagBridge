@@ -205,15 +205,15 @@ def _girder_tables(d, n_girders):
              Col("Girder Type", 0.24), Col("Girder Symmetry", 0.24)],
             gen_rows, caption="Girder General Information")
         + K.data_table(
-            [Col("Girder", 0.10), Col("Total Depth, D (mm)", 0.17), Col(K.raw("Web, $t_w$ (mm)"), 0.13),
-             Col(K.raw(r"Top Flange (b\textsubscript{tf}, t\textsubscript{tf}) mm"), 0.30),
-             Col(K.raw(r"Bottom Flange (b\textsubscript{bf}, t\textsubscript{bf}) mm"), 0.30)],
+            [Col("Girder", 0.12), Col("Total Depth, D (mm)", 0.16), Col(K.raw("Web, $t_w$ (mm)"), 0.13),
+             Col(K.raw(r"Top Flange (b\textsubscript{tf}, t\textsubscript{tf}) mm"), 0.295),
+             Col(K.raw(r"Bottom Flange (b\textsubscript{bf}, t\textsubscript{bf}) mm"), 0.295)],
             dim_rows, caption="Girder Section Dimensions")
         + K.data_table(
             [Col("Girder", 0.09), Col("Torsional / Warping Restraint", 0.15), Col("Web Philosophy", 0.15),
-             Col("Intermediate Stiffeners", 0.23), Col("Longitudinal Stiffeners", 0.16),
-             Col("Bearing Stiffener", 0.22)],
-            rst_rows, caption="Girder Restraint and Stiffener Details", size=r"\small")
+             Col("Intermediate Stiffeners", 0.22), Col("Longitudinal Stiffeners", 0.20),
+             Col("Bearing Stiffener", 0.19)],
+            rst_rows, caption="Girder Restraint and Stiffener Details", compact=True)
     )
 
 
