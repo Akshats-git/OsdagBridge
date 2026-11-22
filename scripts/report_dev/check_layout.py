@@ -125,7 +125,7 @@ def check_orphan_headings(pdf_path: str) -> list[dict]:
     hits = []
     with pdfplumber.open(pdf_path) as pdf:
         for pno, page in enumerate(pdf.pages, start=1):
-            lines = [l for l in _lines(page) if l["bottom"] < page.height - 90]
+            lines = [ln for ln in _lines(page) if ln["bottom"] < page.height - 90]
             if not lines:
                 continue
             txt = lines[-1]["text"].strip()

@@ -75,7 +75,7 @@ This section presents CAD-generated views of the designed bridge and its compone
 """
             + cbdia + '\n\n'
             + cb_sections_row + r"""
-            
+
 
 \section{End Diaphragm Detail}
 \label{sec:diaphragm-detail}

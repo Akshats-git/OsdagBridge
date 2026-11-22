@@ -28,7 +28,7 @@ design modules, and notes the limitations of the current software version.
 \section{Design Standards}
 \label{sec:design_standards}
 
-The following Indian Road Congress (IRC) codes and Indian Standards (IS) 
+The following Indian Road Congress (IRC) codes and Indian Standards (IS)
 form the basis of all design calculations in this software.
 
 """
@@ -141,5 +141,3 @@ form the basis of all design calculations in this software.
 """)
 
     return "\n".join(assumptions)
-
-

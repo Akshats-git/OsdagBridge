@@ -62,7 +62,6 @@ from osdagbridge.core.utils.common import (
     KEY_DS_TOP_CLEAR_COVER,
     KEY_MATERIAL_DECK_FCK,
     KEY_MATERIAL_DECK_FCTM,
-    KEY_MP_ED_TYPE,
     KEY_SD_BOTTOM_FLANGE_THICKNESS,
     KEY_SD_BOTTOM_FLANGE_WIDTH,
     KEY_SD_BS_FCD,
@@ -269,7 +268,7 @@ def _girder_tables(od, idc, entries):
         (r"Transformed Composite $I_z$ (cm$^4$)", KEY_SD_COMPOSITE_IZ),
         (r"Depth to Plastic Neutral Axis (mm)", KEY_SD_PNA_DEPTH),
     ]
-    rows, groups = _grouped(entries, lambda lbl, gi: [(M(l), val(od, k)) for l, k in props])
+    rows, groups = _grouped(entries, lambda lbl, gi: [(M(title), val(od, k)) for title, k in props])
     t.append(K.data_table([Col("Girder", 0.16, "c"), Col("Property", 0.52), Col("Value", 0.32, "c")],
                           rows, caption="Girder Section Properties (Final Optimized / User-selected)",
                           groups=groups))
@@ -701,7 +700,9 @@ The reinforced concrete deck slab is designed per IRC~112:2011 (flexure, shear, 
     t.append(K.note("Note: IRC 112 Cl. 10.3.2. Shear reinforcement not provided in deck slabs; capacity relies on "
                     "concrete and main reinforcement.", small=False))
 
-    sub = lambda s: Span(4, K.bold(s))
+    def sub(s):
+        return Span(4, K.bold(s))
+
     t.append(K.data_table(
         [Col("Parameter", 0.32), Col("Required / Limit", 0.26, "c"), Col("Provided", 0.26, "c"), Col("Status", 0.16, "c")],
         [(sub("Main Reinforcement --- Bottom (Transverse)"),),
@@ -901,5 +902,6 @@ def _overall_summary(bridge, od, idc, fig_paths):
         + K.note(M(r"Note: UR = Demand / Capacity. A check passes when UR $\leq 1.0$. Checks without a result "
                    r"are shown as a dash and are not counted as passing. The governing check "
                    r"for each component is highlighted in the individual design check sections above."),
-                 small=False) + K.figure(fig_paths.get("ur_chart"), "Utilisation ratio of every design check (limit = 1.0)",
-                    max_height=T.FIGURE_TALL_HEIGHT))
+                 small=False)
+        + K.figure(fig_paths.get("ur_chart"), "Utilisation ratio of every design check (limit = 1.0)",
+                   max_height=T.FIGURE_TALL_HEIGHT))

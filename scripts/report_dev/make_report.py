@@ -81,7 +81,7 @@ def gui_parity(data: dict) -> None:
     from osdagbridge.core.bridge_types.plate_girder.defaults import solve_extend_basic_input_dict
     from osdagbridge.desktop.ui.dialogs.additional_input.additional_inputs import AdditionalInputs
 
-    _app = QApplication.instance() or QApplication([])
+    _app = QApplication.instance() or QApplication([])  # noqa: F841  (keep a reference alive)
     # solve_extend_basic_input_dict re-seeds the Loading tab defaults (all vehicles
     # ticked ...). In the GUI the user's Additional Inputs are applied after it, so
     # keep what the .osi says for those keys.

@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
+from osdagbridge.core.reports.theme import ur_passes
+
 G = 9.81  # m/s2, tonne-force -> kN, as used by irc6_2017.py
 
 # ---------------------------------------------------------------------------
@@ -97,15 +99,15 @@ def _float(v) -> Optional[float]:
 def _code_total_kN(key: str) -> float:
     """Total vehicle load in kN: from the code data when available, else nominal tonnes."""
     try:
-        from osdagbridge.core.utils.codes.irc6_2017 import IRC6_2017 as I
+        from osdagbridge.core.utils.codes.irc6_2017 import IRC6_2017 as irc6
         if key == "class_a":
-            return sum(I.cl_204_1_ClassA_vehicle()["wheel_loads"]) / 1000.0
+            return sum(irc6.cl_204_1_ClassA_vehicle()["wheel_loads"]) / 1000.0
         if key == "70r_wheeled":
-            return sum(I.cl_204_1_Class70R_vehicle_wheel()["wheel_loads"]) / 1000.0
+            return sum(irc6.cl_204_1_Class70R_vehicle_wheel()["wheel_loads"]) / 1000.0
         if key == "sv":
-            return float(I.cl_204_5_1_special_vehicle()["total_load_kN"])
+            return float(irc6.cl_204_5_1_special_vehicle()["total_load_kN"])
         if key == "fatigue":
-            return sum(I.cl_204_6_fatigue_load()["wheel_loads"]) / 1000.0
+            return sum(irc6.cl_204_6_fatigue_load()["wheel_loads"]) / 1000.0
     except Exception:
         pass
     return NOMINAL_TONNES[key] * G
@@ -247,7 +249,6 @@ class URRow:
         """'PASS' / 'FAIL' by the single rule in theme.ur_passes, else 'n/a'."""
         if self.ur is None:
             return "n/a"
-        from osdagbridge.core.reports.theme import ur_passes
         return "PASS" if ur_passes(self.ur) else "FAIL"
 
 
@@ -511,7 +512,6 @@ def element_verdicts(rows: List[URRow]) -> dict:
         if not urs:
             out[el] = ("n/a", None)
             continue
-        from osdagbridge.core.reports.theme import ur_passes
         m = max(urs)
         out[el] = ("PASS" if ur_passes(m) else "FAIL", m)
     return out

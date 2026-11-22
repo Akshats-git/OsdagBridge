@@ -32,7 +32,7 @@ ALLOWED_PAGEBREAK = {"executive_summary.py"}
 
 
 def _strip_comments(src: str) -> str:
-    return "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
+    return "\n".join(ln for ln in src.splitlines() if not ln.lstrip().startswith("#"))
 
 
 @pytest.mark.parametrize("path", CHAPTER_FILES, ids=lambda p: p.name)
