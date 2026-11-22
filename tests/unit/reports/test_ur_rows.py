@@ -1,11 +1,10 @@
-"""UR rows, element verdicts, end-diaphragm isolation (F25-F27) and the UR chart."""
+"""UR rows, element verdicts, end-diaphragm isolation and the UR chart."""
 import pathlib
 import re
 
 import pytest
 
 from osdagbridge.core.reports import report_data as D
-from osdagbridge.core.reports import theme as T
 
 REPORTS = pathlib.Path(__file__).resolve().parents[3] / "src" / "osdagbridge" / "core" / "reports"
 
@@ -38,7 +37,7 @@ def _row(rows, label):
 
 
 def test_status_uses_single_rule():
-    assert D.URRow("Girder", "x", ur=1.0).status == "PASS"       # UR <= 1.0 passes (F27)
+    assert D.URRow("Girder", "x", ur=1.0).status == "PASS"       # UR <= 1.0 passes
     assert D.URRow("Girder", "x", ur=1.0001).status == "FAIL"
     assert D.URRow("Girder", "x", ur=None).status == "n/a"
 
@@ -93,7 +92,7 @@ def test_chart_is_vector_pdf_and_marks_na(tmp_path):
 
 def test_charts_never_import_pyplot():
     src = (REPORTS / "charts.py").read_text(encoding="utf-8")
-    code = "\n".join(l for l in src.splitlines() if re.match(r"\s*(import|from)\s", l) or "(" in l)
+    code = "\n".join(ln for ln in src.splitlines() if re.match(r"\s*(import|from)\s", ln) or "(" in ln)
     assert not re.search(r"import\s+.*pyplot|from\s+\S*pyplot|matplotlib\.use\(|rcParams\.update\(", code)
 
 
@@ -106,3 +105,13 @@ def test_quantity_charts_draw_values_and_na(tmp_path):
     made = charts.quantity_charts(q, str(tmp_path))
     assert set(made) == {"steel_chart", "concrete_chart"}
     assert all((tmp_path / f).read_bytes().startswith(b"%PDF") for f in made.values())
+
+
+def test_ur_chart_has_ur_on_the_y_axis_and_a_horizontal_limit_line():
+    from osdagbridge.core.reports import charts, theme
+    rows = [D.URRow("Girder", "Girder --- Moment", ur=0.5), D.URRow("Girder", "Girder --- Fatigue", ur=1.58)]
+    ax = charts.ur_figure(rows).axes[0]
+    assert "tilisation ratio" in ax.get_ylabel()
+    (limit,) = [ln for ln in ax.lines if ln.get_linestyle() == "--"]
+    assert list(limit.get_ydata()) == [theme.UR_LIMIT, theme.UR_LIMIT]       # horizontal
+    assert limit.get_color() == theme.hex_color(theme.CHART_LIMIT_COLOR)

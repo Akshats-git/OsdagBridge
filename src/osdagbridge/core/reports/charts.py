@@ -8,6 +8,7 @@ enforces the no-pyplot rule.  Colours, sizes and fonts come from ``theme.py``.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Optional, Sequence
 
 from matplotlib import rc_context
@@ -18,47 +19,61 @@ from osdagbridge.core.reports.report_data import URRow
 
 logger = logging.getLogger(__name__)
 
-ROW_HEIGHT_IN = 0.24
+UR_FIG_HEIGHT_IN = 4.6
+LABEL_ROTATION = 40
 
 
 def _plain(label: str) -> str:
     """Report labels hold LaTeX dashes; charts use plain text."""
-    return label.replace(" --- ", " – ").replace("---", "–")
+    return label.replace(" --- ", " \u2013 ").replace("---", "\u2013")
+
+
+def _bars(ax, items, ylabel: str, fmt: str = "{:.2f}", color: str = T.CHART_BAR_COLOR,
+          na_text: str = "n/a", rotation: int = LABEL_ROTATION, colors=None) -> float:
+    """Vertical bars with a value label on top; ``None`` values get an ``na_text`` marker.
+
+    ``colors`` optionally gives one colour per bar.  Returns the upper y limit.
+    """
+    top = max([v for _, v in items if v is not None] + [1e-9]) * 1.18
+    small = T.CHART_FONT_SIZE - 1
+    for x, (_, v) in enumerate(items):
+        if v is None:
+            ax.text(x, 0.015 * top, na_text, va="bottom", ha="center", fontsize=small,
+                    color=T.hex_color(T.CHART_NA_COLOR), style="italic")
+            continue
+        bar_color = colors[x] if colors else color
+        ax.bar(x, v, width=0.62, color=T.hex_color(bar_color), zorder=3)
+        ax.text(x, v + 0.01 * top, fmt.format(v), va="bottom", ha="center", fontsize=small)
+    ax.set_xticks(range(len(items)))
+    ax.set_xticklabels([label for label, _ in items], rotation=rotation,
+                       ha="right" if rotation else "center", rotation_mode="anchor")
+    ax.set_xlim(-0.6, len(items) - 0.4)
+    ax.set_ylim(0, top)
+    ax.set_ylabel(ylabel)
+    ax.grid(axis="x", visible=False)
+    return top
 
 
 def ur_figure(rows: Sequence[URRow]) -> Figure:
-    """Horizontal bar chart of every utilisation ratio, with the limit line.
+    """Bar chart of every utilisation ratio with a red dashed line at the limit.
 
-    A bar turns the fail colour when its UR exceeds ``theme.UR_LIMIT``; checks
-    without a numeric result get an "n/a" marker instead of a bar (they are not
-    drawn as zero, which would read as a pass).
+    The y-axis is the utilisation ratio.  A bar turns the fail colour when its UR
+    exceeds ``theme.UR_LIMIT``; checks without a numeric result get an "n/a" marker
+    instead of a bar (they are not drawn as zero, which would read as a pass).
     """
     with rc_context(T.mpl_rc()):
-        n = max(len(rows), 1)
-        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, ROW_HEIGHT_IN * n + 0.9))
+        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, UR_FIG_HEIGHT_IN))
         ax = fig.add_subplot(111)
-        ys = list(range(n))
-        urs = [r.ur for r in rows]
-        top = max([u for u in urs if u is not None] + [T.UR_LIMIT]) * 1.15
-        for y, r in zip(ys, rows):
-            if r.ur is None:
-                ax.text(0.01 * top, y, "n/a", va="center", ha="left", fontsize=T.CHART_FONT_SIZE - 1,
-                        color=T.hex_color(T.CHART_NA_COLOR), style="italic")
-                continue
-            color = T.CHART_BAR_COLOR if T.ur_passes(r.ur) else T.CHART_BAR_FAIL_COLOR
-            ax.barh(y, r.ur, height=0.62, color=T.hex_color(color), zorder=3)
-            ax.text(r.ur + 0.01 * top, y, f"{r.ur:.2f}", va="center", ha="left",
-                    fontsize=T.CHART_FONT_SIZE - 1)
-        ax.axvline(T.UR_LIMIT, color=T.hex_color(T.CHART_LIMIT_COLOR), linestyle="--", linewidth=1.0, zorder=4)
-        ax.text(T.UR_LIMIT, -0.9, f"limit = {T.UR_LIMIT:g}", color=T.hex_color(T.CHART_LIMIT_COLOR),
-                ha="center", va="bottom", fontsize=T.CHART_FONT_SIZE - 1)
-        ax.set_yticks(ys)
-        ax.set_yticklabels([_plain(r.label) for r in rows])
-        ax.set_ylim(n - 0.4, -1.0)          # first row on top, room for the limit label
-        ax.set_xlim(0, top)
-        ax.set_xlabel("Utilisation ratio (demand / capacity)")
-        ax.grid(axis="y", visible=False)
-        fig.subplots_adjust(left=0.36, right=0.97, top=0.98, bottom=0.8 / (ROW_HEIGHT_IN * n + 0.9))
+        items = [(_plain(r.label), r.ur) for r in rows]
+        colors = [T.CHART_BAR_COLOR if r.ur is None or T.ur_passes(r.ur) else T.CHART_BAR_FAIL_COLOR
+                  for r in rows]
+        top = _bars(ax, items, "Utilisation ratio (demand / capacity)", colors=colors)
+        top = max(top, T.UR_LIMIT * 1.15)
+        ax.set_ylim(0, top)
+        ax.axhline(T.UR_LIMIT, color=T.hex_color(T.CHART_LIMIT_COLOR), linestyle="--", linewidth=1.0, zorder=4)
+        ax.text(len(items) - 0.45, T.UR_LIMIT + 0.01 * top, f"limit = {T.UR_LIMIT:g}",
+                color=T.hex_color(T.CHART_LIMIT_COLOR), ha="right", va="bottom", fontsize=T.CHART_FONT_SIZE - 1)
+        fig.subplots_adjust(left=0.1, right=0.99, top=0.98, bottom=0.36)
         return fig
 
 
@@ -94,32 +109,13 @@ def _items(q: dict, spec, suffix: str):
     return [(label, q.get(f"{key}_{suffix}_num")) for label, key in spec]
 
 
-def _hbar(ax, items, unit: str, fmt: str = "{:.2f}", color: str = T.CHART_BAR_COLOR) -> None:
-    top = max([v for _, v in items if v is not None] + [1e-9]) * 1.18
-    ys = list(range(len(items)))
-    for y, (_, v) in zip(ys, items):
-        if v is None:
-            ax.text(0.01 * top, y, "N.A.", va="center", ha="left", fontsize=T.CHART_FONT_SIZE - 1,
-                    color=T.hex_color(T.CHART_NA_COLOR), style="italic")
-        else:
-            ax.barh(y, v, height=0.6, color=T.hex_color(color), zorder=3)
-            ax.text(v + 0.01 * top, y, fmt.format(v), va="center", ha="left", fontsize=T.CHART_FONT_SIZE - 1)
-    ax.set_yticks(ys)
-    ax.set_yticklabels([lbl for lbl, _ in items])
-    ax.set_ylim(len(items) - 0.4, -0.6)
-    ax.set_xlim(0, top)
-    ax.set_xlabel(unit)
-    ax.grid(axis="y", visible=False)
-
-
 def steel_tonnage_figure(q: dict) -> Figure:
     """Structural steel weight (MT) per member group; missing items read N.A., not zero."""
     items = _items(q, STEEL_ITEMS, "wt_total")
     with rc_context(T.mpl_rc()):
-        h = ROW_HEIGHT_IN * len(items) + 0.9
-        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, h))
-        _hbar(fig.add_subplot(111), items, "Weight (MT)")
-        fig.subplots_adjust(left=0.27, right=0.96, top=0.97, bottom=0.8 / h)
+        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, T.CHART_FIG_HEIGHT_IN))
+        _bars(fig.add_subplot(111), items, "Weight (MT)", na_text="N.A.")
+        fig.subplots_adjust(left=0.1, right=0.99, top=0.97, bottom=0.33)
         return fig
 
 
@@ -128,18 +124,16 @@ def concrete_rebar_figure(q: dict) -> Figure:
     conc = _items(q, CONCRETE_ITEMS, "vol_total")
     rebar = [("Deck reinforcement", q.get("rebar_deck_wt_total_num"))]
     with rc_context(T.mpl_rc()):
-        h = ROW_HEIGHT_IN * 2 + 1.1
-        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, h))
-        a1, a2 = fig.subplots(1, 2, gridspec_kw={"width_ratios": [3, 2]})
-        _hbar(a1, conc, "Concrete volume (m³)")
-        _hbar(a2, rebar, "Reinforcement weight (MT)", color=T.PRIMARY)
-        fig.subplots_adjust(left=0.17, right=0.97, top=0.96, bottom=0.8 / h * 1.15, wspace=0.75)
+        fig = Figure(figsize=(T.CHART_FIG_WIDTH_IN, T.CHART_FIG_HEIGHT_IN))
+        a1, a2 = fig.subplots(1, 2, gridspec_kw={"width_ratios": [2, 1]})
+        _bars(a1, conc, "Concrete volume (m\u00b3)", na_text="N.A.", rotation=0)
+        _bars(a2, rebar, "Reinforcement weight (MT)", color=T.PRIMARY, na_text="N.A.", rotation=0)
+        fig.subplots_adjust(left=0.09, right=0.99, top=0.97, bottom=0.14, wspace=0.3)
         return fig
 
 
 def quantity_charts(q: dict, out_dir: str) -> dict:
     """Write both quantity charts into ``out_dir``; returns {name: filename} for those drawn."""
-    import os
     made = {}
     for name, make in (("steel_chart", steel_tonnage_figure), ("concrete_chart", concrete_rebar_figure)):
         try:
