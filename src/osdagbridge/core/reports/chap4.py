@@ -12,6 +12,7 @@ from osdagbridge.core.reports.latex_kit import Col
 if TYPE_CHECKING:
     from .report_generator import ReportDataBridge
 
+
 def ch4_analysis(asum, fig_paths, bridge: "ReportDataBridge", span_m: float):
     lc_summary  = (asum or {}).get('load_cases', {})
     rxn_summary = (asum or {}).get('reactions',  {})
@@ -66,9 +67,9 @@ def ch4_analysis(asum, fig_paths, bridge: "ReportDataBridge", span_m: float):
     _total_status = (K.pass_fail("PASS" if _total_mm <= _allow_total_mm else "FAIL")
                      if _total_mm is not None else None)
 
-    cols = [Col("Load Case / Comb.", 0.175), Col("Max (kNm)", 0.116, "c"), Col("Girder", 0.10, "c"),
-            Col("Loc. (m)", 0.088, "c"), Col("Max (kN)", 0.116, "c"), Col("Girder", 0.10, "c"),
-            Col("Loc. (m)", 0.088, "c"), Col("Left", 0.109, "c"), Col("Right", 0.109, "c")]
+    cols = [Col("Load Case / Comb.", 0.20), Col("Max (kNm)", 0.105, "c"), Col("Girder", 0.095, "c"),
+            Col("Loc. (m)", 0.075, "c"), Col("Max (kN)", 0.105, "c"), Col("Girder", 0.095, "c"),
+            Col("Loc. (m)", 0.075, "c"), Col("Left", 0.125, "c"), Col("Right", 0.125, "c")]
     summary_tbl = K.data_table(
         cols, merged_rows, caption="Summary of Maximum Demands", compact=True,
         header_groups=[("", 1), ("Bending Moment", 3), ("Shear Force", 3), ("Reactions (kN)", 2)])

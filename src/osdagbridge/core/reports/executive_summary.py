@@ -59,10 +59,13 @@ def _max_member_efficiency(pair_designs):
 
 
 def executive_summary(input_dict, output_dict, fig_paths, has_checks_chapter=True) -> str:
-    plan_fig = K.figure(fig_paths.get('girder_top'), 'Figure 1 -- Overall Bridge Plan')
+    plan_fig = K.figure(fig_paths.get('girder_top'), 'Figure 1 -- Overall Bridge Plan',
+                       max_height=T.FIGURE_SUMMARY_HEIGHT)
     cs_fig = K.figure(fig_paths.get('cross_section'),
-                      'Figure 2 -- Typical Cross-Section (with girder, deck, barriers, footpath)')
-    geom_fig = K.figure(fig_paths.get('final_geometry'), 'Figure 3 -- 3D View of Bridge Superstructure')
+                      'Figure 2 -- Typical Cross-Section (with girder, deck, barriers, footpath)',
+                      max_height=T.FIGURE_SUMMARY_HEIGHT)
+    geom_fig = K.figure(fig_paths.get('final_geometry'), 'Figure 3 -- 3D View of Bridge Superstructure',
+                        max_height=T.FIGURE_SUMMARY_HEIGHT)
 
     # All girders share the same section, governing check, and UR.
     # The section designation is produced by the designer pipeline, so it lives
@@ -157,8 +160,8 @@ def executive_summary(input_dict, output_dict, fig_paths, has_checks_chapter=Tru
         ("Span", val(input_dict, KEY_SPAN, " m")),
         ("Carriageway Width", val(input_dict, KEY_CARRIAGEWAY_WIDTH, " m")),
         ("No. of Girders", val(input_dict, KEY_TS_NO_OF_GIRDERS)),
-        ("Girder Spacing", val(input_dict, KEY_TS_GIRDER_SPACING)),
-        ("Deck Thickness", val(input_dict, KEY_TS_DECK_THICKNESS)),
+        ("Girder Spacing", val(input_dict, KEY_TS_GIRDER_SPACING, " m")),
+        ("Deck Thickness", val(input_dict, KEY_TS_DECK_THICKNESS, " mm")),
         ("Overall Design Status", overall_design_status or None),
         ("Governing Check", gov),
         ("Overall Utilization Ratio (max)", ur),

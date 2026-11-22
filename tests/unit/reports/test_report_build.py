@@ -102,7 +102,7 @@ def test_s3_vehicle_table_follows_the_ticks(build):
     text = _text(build("S3_vehicle_subset_footway") / "report.pdf")
     start = text.index("Vehicular Live Load (IRC")
     table = text[start:text.index("Footway Live Load", start)]
-    assert "Class A" in table and "Class 70R (Wheeled)" in table and "Class SV" in table
+    assert all(name in _flat(table) for name in ("Class A", "Class 70R (Wheeled)", "Class SV"))
     rows = [ln for ln in table.splitlines() if ln.startswith(("Class", "Fatigue"))]
     for unticked in ("Class AA", "Class 70R (Tracked)", "Class 70R (Bogie)", "Fatigue Vehicle"):
         assert not any(r.startswith(unticked) for r in rows), (unticked, rows)

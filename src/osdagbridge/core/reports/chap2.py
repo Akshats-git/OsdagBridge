@@ -29,8 +29,6 @@ from osdagbridge.core.utils.common import (
     KEY_MP_ED_MEMBER_ID,
     KEY_MP_ED_SELECT_GIRDERS,
     KEY_MP_ED_TYPE,
-    KEY_MP_GD_MEMBER_ID,
-    KEY_MP_GD_SELECT_GIRDER,
     KEY_MP_GIRDER_BOTTOM_FLANGE_THICKNESS,
     KEY_MP_GIRDER_BOTTOM_FLANGE_WIDTH,
     KEY_MP_GIRDER_DEPTH,
@@ -72,7 +70,7 @@ from osdagbridge.core.utils.common import (
 
 from osdagbridge.core.reports import latex_kit as K
 from osdagbridge.core.reports.latex_kit import Col
-from osdagbridge.core.reports.report_utils import get_girder_entries, val, _tex
+from osdagbridge.core.reports.report_utils import get_girder_entries, val
 
 _PARAM = ("Parameter", "Value")
 
@@ -80,6 +78,19 @@ _PARAM = ("Parameter", "Value")
 def _g(d, key, i, unit=""):
     """Girder-scoped value ``{key}.G{i}.M1``."""
     return val(d, f"{key}.G{i}.M1", unit)
+
+
+def _dim_mm(d, key, i):
+    """Girder section dimension in mm.
+
+    Design converts these inputs to metres (the UI holds them in mm), so a stored
+    value below 20 is a length in metres: no girder dimension is smaller than 20 mm.
+    """
+    try:
+        v = float(d.get(f"{key}.G{i}.M1"))
+    except (TypeError, ValueError):
+        return val(d, f"{key}.G{i}.M1", " mm")
+    return f"{(v * 1000 if v < 20 else v):.1f}".rstrip("0").rstrip(".") + " mm"
 
 
 def ch2_input_parameters(m, input_dict, output_dict=None):
@@ -177,12 +188,12 @@ def _girder_tables(d, n_girders):
     ]
     dim_rows = [
         (lbl,
-         _g(d, KEY_MP_GIRDER_DEPTH, i, " mm"),
-         _g(d, KEY_MP_GIRDER_WEB_THICKNESS, i, " mm"),
-         K.join(_g(d, KEY_MP_GIRDER_TOP_FLANGE_WIDTH, i, " mm"), ", ",
-                _g(d, KEY_MP_GIRDER_TOP_FLANGE_THICKNESS, i, " mm")),
-         K.join(_g(d, KEY_MP_GIRDER_BOTTOM_FLANGE_WIDTH, i, " mm"), ", ",
-                _g(d, KEY_MP_GIRDER_BOTTOM_FLANGE_THICKNESS, i, " mm")))
+         _dim_mm(d, KEY_MP_GIRDER_DEPTH, i),
+         _dim_mm(d, KEY_MP_GIRDER_WEB_THICKNESS, i),
+         K.join(_dim_mm(d, KEY_MP_GIRDER_TOP_FLANGE_WIDTH, i), ", ",
+                _dim_mm(d, KEY_MP_GIRDER_TOP_FLANGE_THICKNESS, i)),
+         K.join(_dim_mm(d, KEY_MP_GIRDER_BOTTOM_FLANGE_WIDTH, i), ", ",
+                _dim_mm(d, KEY_MP_GIRDER_BOTTOM_FLANGE_THICKNESS, i)))
         for lbl, _, i in numbered
     ]
     rst_rows = [

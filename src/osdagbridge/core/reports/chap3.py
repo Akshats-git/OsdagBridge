@@ -5,46 +5,24 @@
 
 from osdagbridge.core.utils.common import (
     KEY_CB_LOAD,
-    KEY_LL_CUSTOM_VEHICLES,
-    KEY_LL_FOOTPATH_PRESSURE_MODE,
-    KEY_LL_FOOTPATH_PRESSURE_VALUE,
-    KEY_LL_IRC_70R_BOGIE,
-    KEY_LL_IRC_70R_TRACKED,
-    KEY_LL_IRC_70R_WHEELED,
-    KEY_LL_IRC_AA_TRACKED,
-    KEY_LL_IRC_AA_WHEELED,
-    KEY_LL_IRC_CLASS_A,
-    KEY_LL_IRC_CLASS_FATIGUE,
-    KEY_LL_IRC_CLASS_SV,
     KEY_MATERIAL_DECK_DENSITY,
     KEY_MATERIAL_GIRDER_DENSITY,
     KEY_PL_SELF_WEIGHT_FACTOR,
     KEY_RL_LOAD_VALUE,
-    KEY_SL_DAMPING,
-    KEY_SL_DEAD_LOAD_MODE,
-    KEY_SL_DEAD_LOAD_VALUE,
     KEY_SL_HORIZONTAL_COEFF,
     KEY_SL_IMPORTANCE_FACTOR,
-    KEY_SL_LIVE_LOAD_MODE,
-    KEY_SL_LIVE_LOAD_VALUE,
-    KEY_SL_SEISMIC_ZONE,
     KEY_SL_SOIL_TYPE,
     KEY_SL_SPECTRAL_COEFF,
-    KEY_SL_TIME_PERIOD,
     KEY_SL_VERTICAL_COEFF,
     KEY_SL_ZONE_FACTOR,
     KEY_SPAN,
     KEY_TL_BRIDGE_TEMP_MAX,
     KEY_TL_BRIDGE_TEMP_MIN,
-    KEY_TL_HIGHEST_MAX_TEMP,
-    KEY_TL_LOWEST_MIN_TEMP,
     KEY_TL_TEMP_FALL,
     KEY_TL_TEMP_RISE,
-    KEY_WC_LD_LANE_TABLE_COUNT,
     KEY_WC_MATERIAL,
     KEY_WC_THICKNESS,
     KEY_WL_AVG_EXPOSED_HEIGHT,
-    KEY_WL_BASIC_WIND_SPEED,
     KEY_WL_HOURLY_MEAN_WIND,
     KEY_WL_HOURLY_WIND_PRESSURE,
     KEY_WL_LONGITUDINAL_WIND_FORCE,
@@ -58,6 +36,7 @@ from osdagbridge.core.reports import report_data as D
 from osdagbridge.core.reports import theme as T
 from osdagbridge.core.reports.latex_kit import Col
 from osdagbridge.core.reports.report_utils import val
+
 
 def _live_load_tables(d):
     """Vehicular and footway live load tables (Chapter 3), from report_data."""
@@ -84,8 +63,8 @@ def _live_load_tables(d):
                 T.fmt(r.braking_kN, 2) if r.braking_kN is not None else ("N/A" if r.braking_considered is None else "---"),
                 T.fmt(r.eccentricity_m, 2) if r.eccentricity_m is not None else "---"))
         out.append(K.data_table(
-            [Col("Vehicle", 0.22), Col("Total Load (kN)", 0.12, "c"), Col("Impact Factor", 0.20, "c"),
-             Col("Applied?", 0.14, "c"), Col("Value (kN)", 0.12, "c"), Col("Eccentricity (m)", 0.20, "c")],
+            [Col("Vehicle", 0.22), Col("Total Load (kN)", 0.11, "c"), Col("Impact Factor", 0.19, "c"),
+             Col("Considered?", 0.17, "c"), Col("Value (kN)", 0.12, "c"), Col("Eccentricity (m)", 0.19, "c")],
             table_rows, caption="Vehicular Live Load (IRC 6:2017)", compact=True,
             header_groups=[("", 3), ("Braking Load (Cl. 211)", 3)]))
         notes = [
@@ -93,7 +72,6 @@ def _live_load_tables(d):
             "(Class AA / 70R) for steel bridges; no impact is applied to braking (Cl. 211.2) or to the "
             "footway load (Cl. 208.4). Braking is 20% of the vehicle load (first train, Cl. 211.2) and acts "
             "at the eccentricity above the deck given in Cl. 211.3.",
-            "Centrifugal force is not applicable: the alignment is straight (no curvature input), Cl. 212.1.",
         ]
         sv = [r for r in rows if r.key == "sv"]
         if sv and sv[0].note:
@@ -112,6 +90,11 @@ def _live_load_tables(d):
                 pass
         for n in notes:
             out.append(K.note(n))
+        out.append(K.kv_table([
+            ("Braking force (Cl. 211)", "Considered per vehicle, see the vehicular live load table"),
+            ("Centrifugal force (Cl. 212)",
+             "Not applicable: the alignment is straight (the inputs contain no curvature)"),
+        ], caption="Other Live Load Effects (IRC 6:2017)", header=("Effect", "Status")))
 
     fw = D.collect_footway(d)
     if fw.present:
@@ -147,18 +130,18 @@ def ch3_loads(input_dict):
     def _fmt_factors(factors):
         """Format a factors dict into a compact load-case string for the table."""
         parts = []
-        for load, val in factors.items():
+        for load, factor in factors.items():
             label = _LOAD_LABEL_MAP.get(load, load.upper())
-            if isinstance(val, dict):  # permanent load with adding/relieving
-                add = val.get('adding')
-                rel = val.get('relieving')
+            if isinstance(factor, dict):  # permanent load with adding/relieving
+                add = factor.get('adding')
+                rel = factor.get('relieving')
                 add_s = f"{add:.2f}" if add is not None else '--'
                 rel_s = f"{rel:.2f}" if rel is not None else '--'
                 parts.append(f"{label}({add_s}/{rel_s})")
             else:
-                if val is None:
+                if factor is None:
                     continue  # skip N/A factors
-                parts.append(f"{label}({val:.2f})")
+                parts.append(f"{label}({factor:.2f})")
         return ' + '.join(parts)
 
     uls_combos = IRC6_2017.uls_load_combinations()
@@ -172,7 +155,6 @@ def ch3_loads(input_dict):
     d = input_dict
     P = ("Parameter", "Value")
     sup3 = K.raw(r" kN/m\textsuperscript{3}")
-    sup2_kn = K.raw(r" kN/m\textsuperscript{2}")
     sup2_n = K.raw(r" N/m\textsuperscript{2}")
     deg_c = K.raw(r" $^\circ$C")
 
