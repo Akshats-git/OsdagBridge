@@ -102,6 +102,7 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 \renewcommand{\subsection}{\keepwithnext\osdagorigsubsection}
 \renewcommand{\subsubsection}{\keepwithnext\osdagorigsubsubsection}
 \raggedbottom
+\setlist{itemsep=<<itemsep>>pt, parsep=0pt, topsep=<<topsep>>pt}
 \setlength{\emergencystretch}{<<emergency>>}
 
 % ---- Header and footer ------------------------------------------------------
@@ -170,10 +171,10 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
         "pt": T.BASE_FONT_PT, "paper": T.PAPER, "margin": T.MARGIN,
         "headheight": T.HEADHEIGHT, "headsep": T.HEADSEP, "footskip": T.FOOTSKIP,
         "unicode": _unicode_declarations(), "colors": _colors(),
-        "capskip": T.CAPTION_SKIP_PT, "tabcolsep": T.TABCOLSEP_PT,
+        "capskip": T.CAPTION_SKIP_PT, "itemsep": T.LIST_ITEMSEP_PT, "topsep": T.LIST_TOPSEP_PT, "tabcolsep": T.TABCOLSEP_PT,
         "stretch": T.ARRAYSTRETCH, "ltpre": T.LT_PRE_PT, "ltpost": T.LT_POST_PT,
         "rule": T.ARRAYRULE_PT, "extra": T.EXTRAROWHEIGHT_PT,
-        "needspace_h": T.NEEDSPACE_HEADING_LINES, "needspace_t": T.NEEDSPACE_TABLE_LINES,
+        "needspace_h": T.NEEDSPACE_HEADING_LINES,
         "sdnote": T.SD_NOTE, "footer_left": T.FOOTER_LEFT, "footer_right": T.FOOTER_RIGHT,
         "rulew": T.RULE_THICKNESS_PT, "linestretch": T.LINE_STRETCH,
         "chapter_before": T.CHAPTER_BEFORE_PT, "emergency": T.EMERGENCY_STRETCH,
@@ -190,3 +191,51 @@ def build_preamble(project_name, job_number, report_date, report_version="Rev 0"
 def toc_block() -> str:
     """Table of contents page (formatting is already in the preamble)."""
     return "\n\\newpage\n\\tableofcontents\n"
+
+
+def _title_logos(osdag_logo, org_logo) -> str:
+    """Logo row: Osdag left and organisation right, or the Osdag logo centred without one."""
+    osdag = (r"\includegraphics[width=\linewidth,keepaspectratio]{%s}" % osdag_logo.replace("\\", "/")
+             if osdag_logo else r"\textit{(Osdag Logo)}")
+    if not org_logo:
+        return (r"\begin{minipage}[c]{0.5\textwidth}" + "\n\\centering\n" + osdag + "\n"
+                r"\end{minipage}" + "\n" + r"\\[%s]" % T.TITLE_LOGO_GAP + "\n")
+    org = (r"\includegraphics[width=\linewidth,height=%s,keepaspectratio]{%s}"
+           % (T.TITLE_ORG_LOGO_HEIGHT, org_logo.replace("\\", "/")))
+    return (r"\noindent" + "\n"
+            r"\begin{minipage}[c]{0.6\textwidth}" + "\n\\raggedright\n" + osdag + "\n" r"\end{minipage}%" + "\n"
+            r"\hfill" + "\n"
+            r"\begin{minipage}[c]{0.35\textwidth}" + "\n\\raggedleft\n" + org + "\n" r"\end{minipage}" + "\n"
+            + r"\\[%s]" % T.TITLE_LOGO_GAP + "\n")
+
+
+def title_page(meta, osdag_logo, org_logo) -> str:
+    """Title page with the project details table; ``meta`` is a ``ReportMetadata``."""
+    details = (
+        ("Project Name", meta.project_name),
+        ("Project Location", meta.project_location),
+        ("Author / Designer", meta.designer),
+        ("Reviewer", meta.reviewer),
+        ("Organization", meta.company),
+        ("Client Name and Organization", meta.client),
+        ("Job Number", meta.job_number),
+        ("Date", meta.report_date),
+        ("Report Version", meta.subtitle or "Rev 0"),
+    )
+    rows = "\n".join(r"\hline" + "\n" + r"\textbf{%s} & %s \\" % (label, _tex(value)) for label, value in details)
+    return (
+        "\n" r"\begin{titlepage}" "\n"
+        r"\thispagestyle{firstpage}" "\n"
+        r"\centering" "\n"
+        r"\vspace*{%s}" % T.TITLE_TOP_GAP + "\n"
+        + _title_logos(osdag_logo, org_logo)
+        + r"{\Huge \textbf{%s}}\\[%s]" % (T.TITLE_PRODUCT, T.TITLE_NAME_GAP) + "\n"
+        + r"{\large %s}\\[%s]" % (T.TITLE_TAGLINE, T.TITLE_SUBTITLE_GAP) + "\n"
+        + r"{\Large Design Report}\\[%s]" % T.TITLE_SUBTITLE_GAP + "\n"
+        + r"\begin{tabular}{|L{%s}|L{%s}|}" % (T.TITLE_LABEL_WIDTH, T.TITLE_VALUE_WIDTH) + "\n"
+        + rows + "\n" r"\hline" "\n"
+        r"\end{tabular}" "\n"
+        r"\end{titlepage}" "\n"
+        # \begin{titlepage} resets the page counter; carry on from page 2 so the TOC is not "page 1" again
+        r"\setcounter{page}{2}" "\n"
+    )

@@ -1,5 +1,5 @@
 # =============================================================================
-# OsdagBridge — Report Generator  
+# OsdagBridge — Report Generator
 # Matches OsdagBridge expected report format:
 #   • Full title page with logo
 #   • Numbered TOC (Executive Summary + Chapters 1-9)
@@ -105,10 +105,9 @@
 
 import os, shutil, logging, datetime, tempfile, subprocess
 from dataclasses import dataclass, field
-from typing import Optional, List, Literal
+from typing import Optional, List
 
 from osdagbridge.core.utils.common import (
-    KEY_DESIGN_MODE,
     KEY_SPAN,
     KEY_TL_BRIDGE_TEMP_MAX,
     KEY_TL_BRIDGE_TEMP_MIN,
@@ -118,8 +117,7 @@ from osdagbridge.core.utils.common import (
     KEY_TL_TEMP_RISE
 )
 
-from osdagbridge.core.reports.report_utils import _tex
-from osdagbridge.core.reports.preamble import build_preamble, toc_block
+from osdagbridge.core.reports.preamble import build_preamble, title_page, toc_block
 from .executive_summary import executive_summary
 from .chap1 import ch1_project_info
 from .chap2 import ch2_input_parameters
@@ -131,6 +129,9 @@ from .chap7 import ch7_quantities
 from .chap8 import ch8_design_log
 from .chap9 import references
 from .design_log import design_log
+from .theme import ur_passes
+from . import charts
+from .report_data import collect_ur_rows
 
 logger = logging.getLogger(__name__)
 
@@ -145,83 +146,13 @@ logger = logging.getLogger(__name__)
 
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# TITLE PAGE
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def title_page(m, osdag_logo, org_logo):
-    if osdag_logo:
-        lhs = r'\includegraphics[width=\linewidth,keepaspectratio]{' + osdag_logo.replace('\\', '/') + r'}'
-    else:
-        lhs = r'\textit{(Osdag Logo)}'
-
-    if org_logo:
-        rhs = r'\includegraphics[width=\linewidth,height=2.2cm,keepaspectratio]{' + org_logo.replace('\\', '/') + r'}'
-    else:
-        rhs = r''
-
-    if org_logo:
-        logos_tex = r"""\noindent
-\begin{minipage}[c]{0.6\textwidth}
-\raggedright
-""" + lhs + r"""
-\end{minipage}%
-\hfill
-\begin{minipage}[c]{0.35\textwidth}
-\raggedleft
-""" + rhs + r"""
-\end{minipage}
-\\[1cm]
-"""
-    else:                       # no organisation logo available: centre the Osdag logo, no empty column
-        logos_tex = r"""\begin{minipage}[c]{0.5\textwidth}
-\centering
-""" + lhs + r"""
-\end{minipage}
-\\[1cm]
-"""
-
-    return r"""
-\begin{titlepage}
-\thispagestyle{firstpage}
-\centering
-\vspace*{1.5cm}
-""" + logos_tex + r"""
-{\Huge \textbf{OsdagBridge}}\\[0.3cm]
-{\large Open Source Software for Steel Girder Bridge Design}\\[1.5cm]
-{\Large Design Report}\\[1.5cm]
-\begin{tabular}{|L{4cm}|L{10cm}|}
-\hline
-\textbf{Project Name} & """ + _tex(m.project_name) + r""" \\
-\hline
-\textbf{Project Location} & """ + _tex(m.project_location) + r""" \\
-\hline
-\textbf{Author / Designer} & """ + _tex(m.designer) + r""" \\
-\hline
-\textbf{Reviewer} & """ + _tex(m.reviewer) + r""" \\
-\hline
-\textbf{Organization} & """ + _tex(m.company) + r""" \\
-\hline
-\textbf{Client Name and Organization} & """ + _tex(m.client) + r""" \\
-\hline
-\textbf{Job Number} & """ + _tex(m.job_number) + r""" \\
-\hline
-\textbf{Date} & """ + _tex(m.report_date) + r""" \\
-\hline
-\textbf{Report Version} & """ + (_tex(m.subtitle) if m.subtitle else '') + r""" \\
-\hline
-\end{tabular}
-\end{titlepage}
-"""
-
-
 # =============================================================================
 # Chapter modules are now imported from the dedicated report submodules.
 # report_generator.py remains the orchestration entry point.
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Public data-classes 
+# Public data-classes
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -433,7 +364,6 @@ class ReportDataBridge:
             val = self._cb_osdag(pair, member, force_type).get("efficiency")
             if val is not None:
                 ur = float(val)
-                from osdagbridge.core.reports.theme import ur_passes
                 return "PASS" if ur_passes(ur) else "FAIL"
         except (TypeError, ValueError):
             pass
@@ -486,10 +416,10 @@ def _format_project_location(pl_data):
         pl_dict = pl_data
     else:
         return str(pl_data)
-    
+
     method = pl_dict.get('method')
     data = pl_dict.get('data', {})
-    
+
     if method == 'location_name':
         dist = data.get('district', '')
         state = data.get('state', '')
@@ -515,7 +445,7 @@ def _format_project_location(pl_data):
         return 'Map Location'
     elif method == 'custom_data':
         return 'Custom Location Data'
-    
+
     return str(pl_data)
 
 # ---------------------------------------------------------------------------
@@ -552,20 +482,20 @@ def build_report_payload(request, input_dict, output_dict):
                 pl_dict = raw_pl
             else:
                 pl_dict = {}
-                
+
             if pl_dict and isinstance(pl_dict, dict):
                 data = pl_dict.get('data', {})
                 weather = pl_dict.get('weather_data', {})
-                
+
                 # We prioritize manual inputs if they exist, else we use the DB/map coordinates
                 lat_val = data.get('latitude') or weather.get('latitude')
                 lon_val = data.get('longitude') or weather.get('longitude')
-                
+
                 if 'latitude' not in input_dict and lat_val:
                     input_dict['latitude'] = lat_val
                 if 'longitude' not in input_dict and lon_val:
                     input_dict['longitude'] = lon_val
-                    
+
                 if 'seismic_zone' not in input_dict and weather.get('zone'):
                     input_dict['seismic_zone'] = weather.get('zone')
                 if 'wind_speed' not in input_dict and weather.get('wind_speed'):
@@ -607,7 +537,7 @@ def build_report_payload(request, input_dict, output_dict):
         asum = {}
         if output_dict:
             asum = output_dict.get('analysis_summary', {})
-   
+
 
         # 4) Grab Design Checks and Log
         dc = []
@@ -691,7 +621,7 @@ def generate_report(payload, request):
                     os.environ['PATH'] = str(latex_env.bin_dir) + os.pathsep + os.environ.get('PATH', '')
         except Exception as e:
             logger.info("osdag_latex_env not found or failed to load. (%s)", e)
-            
+
         logger.info("Compiler: %s", compiler)
 
         os.makedirs(request.output_dir, exist_ok=True)
@@ -701,19 +631,14 @@ def generate_report(payload, request):
         pdf_path = os.path.join(request.output_dir, request.file_stem + '.pdf')
         tex_path = os.path.join(request.output_dir, request.file_stem + '.tex')
 
-        # A PDF left from an earlier run must never be mistaken for this run's output.
-        for stale in (pdf_path, tex_path):
+        log_path = os.path.join(request.output_dir, request.file_stem + '.log')
+        # Output left from an earlier run must never be mistaken for this run's result.
+        for stale in (pdf_path, tex_path, log_path):
             if os.path.exists(stale):
                 try:
                     os.remove(stale)
                 except OSError as exc:
                     logger.warning("Could not remove stale %s: %s", stale, exc)
-        log_path = os.path.join(request.output_dir, request.file_stem + '.log')
-        if os.path.exists(log_path):
-            try:
-                os.remove(log_path)
-            except OSError:
-                pass
         n_errors = 0
         last_rc = None
 
@@ -733,11 +658,9 @@ def generate_report(payload, request):
             payload.figure_data.clear()  # bytes no longer needed — free RAM now
 
             # ── Charts drawn from the stored results (vector PDF, same rows as the tables) ──
-            from osdagbridge.core.reports import charts
-            from osdagbridge.core.reports.report_data import collect_ur_rows
-            _ur = charts.ur_chart(collect_ur_rows(payload.inputs, payload.output_dict),
-                                  os.path.join(tmp_images, 'ur_chart.pdf'))
-            if _ur:
+            ur_chart_path = charts.ur_chart(collect_ur_rows(payload.inputs, payload.output_dict),
+                                            os.path.join(tmp_images, 'ur_chart.pdf'))
+            if ur_chart_path:
                 fig_paths['ur_chart'] = 'images/ur_chart.pdf'
 
             # ── Write title-page logos into tmp_dir/assets (auto-deleted) ──
@@ -762,8 +685,8 @@ def generate_report(payload, request):
             # Compute and inject quantities for Chapter 7
             quantities = calculate_material_quantities(payload.inputs, payload.output_dict)
             payload.inputs.update(quantities)
-            for _name, _file in charts.quantity_charts(quantities, tmp_images).items():
-                fig_paths[_name] = 'images/' + _file
+            for chart_name, chart_file in charts.quantity_charts(quantities, tmp_images).items():
+                fig_paths[chart_name] = 'images/' + chart_file
 
             # ── Assemble LaTeX document (fig_paths now has tmp_dir paths) ──
             bridge = ReportDataBridge(payload.output_dict, payload.inputs, payload)
@@ -781,7 +704,7 @@ def generate_report(payload, request):
             # chapters are locked in the UI, so they are always present.
             secs = payload.options.sections
 
-            doc_parts.append(executive_summary(payload.inputs, payload.output_dict, fig_paths, 'design_checks' in payload.options.sections))
+            doc_parts.append(executive_summary(payload.inputs, payload.output_dict, fig_paths, 'design_checks' in secs))
             doc_parts.append(ch1_project_info(payload.metadata))
             doc_parts.append(ch2_input_parameters(payload.metadata, payload.inputs, payload.output_dict))
 
@@ -861,7 +784,7 @@ def generate_report(payload, request):
 
             if os.path.exists(tmp_tex):
                 # The saved .tex must rebuild on its own: ship the images/ and assets/ it
-                # refers to in <stem>_files/ and point the saved copy at them (F30).
+                # refers to in <stem>_files/ and point the saved copy at them.
                 bundle = os.path.join(request.output_dir, request.file_stem + '_files')
                 try:
                     for sub in ('images', 'assets'):

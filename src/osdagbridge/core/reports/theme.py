@@ -13,6 +13,7 @@ it can be imported anywhere (including tests without a TeX installation).
 """
 from __future__ import annotations
 
+
 def tint(hex_colour: str, amount: float) -> str:
     """Mix an RRGGBB colour with white (amount 0 = white, 1 = the colour itself)."""
     rgb = [int(hex_colour[i:i + 2], 16) for i in (0, 2, 4)]
@@ -27,7 +28,7 @@ BASE_FONT_PT = 12
 MARGIN = "1in"
 HEADHEIGHT = "16pt"          # fancyhdr needs >= the header line height + rule
 HEADSEP = "14pt"
-FOOTSKIP = "36pt"            # room for the footer rule, note line and text
+FOOTSKIP = "42pt"            # room for the footer rule, note line and text
 EMERGENCY_STRETCH = "3em"   # lets TeX stretch a line instead of overflowing it
 LINE_STRETCH = 1.15          # \setstretch
 CHAPTER_BEFORE_PT = -30.0    # \titlespacing before a chapter title
@@ -90,9 +91,25 @@ NEEDSPACE_HEADING_LINES = 6      # keep a heading with at least this many lines
 NEEDSPACE_TABLE_LINES = 6        # start a table only if this many lines fit
 FIGURE_MAX_HEIGHT = r"0.42\textheight"
 FIGURE_TALL_HEIGHT = r"0.62\textheight"   # tall charts (e.g. the UR chart)
+FIGURE_SUMMARY_HEIGHT = r"0.22\textheight"  # the three overview figures of the executive summary
 FIGURE_FULL_WIDTH = r"\linewidth"
 FIGURE_ROW_WIDTH = 0.31          # share of \linewidth for each of three side-by-side figures
 SECTION_GAP_PT = 6.0
+LIST_ITEMSEP_PT = 3.0            # space between bullet items
+LIST_TOPSEP_PT = 4.0
+
+# ---------------------------------------------------------------------------
+# Title page
+# ---------------------------------------------------------------------------
+TITLE_TOP_GAP = "1.5cm"
+TITLE_LOGO_GAP = "1cm"           # below the logos
+TITLE_NAME_GAP = "0.3cm"         # below the product name
+TITLE_SUBTITLE_GAP = "1.5cm"     # below the product subtitle and below "Design Report"
+TITLE_ORG_LOGO_HEIGHT = "2.2cm"
+TITLE_LABEL_WIDTH = "4cm"        # label column of the project details table
+TITLE_VALUE_WIDTH = "10cm"
+TITLE_PRODUCT = "OsdagBridge"
+TITLE_TAGLINE = "Open Source Software for Steel Girder Bridge Design"
 
 # ---------------------------------------------------------------------------
 # Header / footer

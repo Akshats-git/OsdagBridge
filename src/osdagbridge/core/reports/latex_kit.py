@@ -233,6 +233,7 @@ def _header_rows(columns: Sequence[Col], header_groups) -> str:
         out.append(" ".join(rules))
         out.append(" & ".join(c.rstrip("%\n ") for c in cells) + r" \\*")
         out.append(" ".join(rules))
+
     def _h(c):
         txt = r"\textbf{%s}" % esc(c.title) if T.HEADER_BOLD else str(esc(c.title))
         return (r"{%s %s}" % (T.HEADER_SIZE, txt)) if T.HEADER_SIZE else txt
@@ -301,7 +302,10 @@ def data_table(
     table.end_table_header()                       # \endhead
     table.append(NoEscape(r"\multicolumn{%d}{r}{\footnotesize\textit{%s}} \\" % (n, T.CONTINUES_TEXT)))
     table.end_table_footer()                       # \endfoot
-    table.end_table_last_footer()                  # \endlastfoot (no foot on the last page)
+    # The closing rule belongs to the last foot.  As a plain \hline after the final row
+    # it can land alone at the top of the next page when the table ends at a page bottom.
+    table.add_hline()
+    table.end_table_last_footer()                  # \endlastfoot
 
     first_in_group, last_in_group = set(), set()
     if groups:
@@ -318,13 +322,16 @@ def data_table(
         if label_col_blank:
             cells[0] = NoEscape("")
         fill = ""
-        if T.TABLE_ZEBRA_FILL and not groups and i % 2 == 1: # grouped tables are already structured by their group rules
+        # zebra rows only in plain tables; grouped tables are already structured by their rules
+        if T.TABLE_ZEBRA_FILL and not groups and i % 2 == 1:
             fill = r"\rowcolor[HTML]{%s} " % T.TABLE_ZEBRA_FILL
         line = fill + _cells(cells)
+        is_last = i == len(rows) - 1
         if in_group:
             if i in last_in_group:
                 table.append(NoEscape(line + r" \\"))
-                table.add_hline()
+                if not is_last:
+                    table.add_hline()
             else:
                 # "\\*" forbids a page break after this row.  No rule is drawn inside
                 # a group: longtable puts a legal break point after every \hline
@@ -332,11 +339,12 @@ def data_table(
                 table.append(NoEscape(line + r" \\*"))
         else:
             table.append(NoEscape(line + r" \\"))
-            table.add_hline()
+            if not is_last:
+                table.add_hline()
 
     body = table.dumps()
     if compact:
-        size = (size or "") + T.COMPACT_SIZE if not size else size
+        size = size or T.COMPACT_SIZE
         body = "{" + size + r"\setlength{\tabcolsep}{%gpt}" % T.COMPACT_TABCOLSEP_PT + "\n" + body + "\n}"
     elif size:
         body = "{" + size + "\n" + body + "\n}"

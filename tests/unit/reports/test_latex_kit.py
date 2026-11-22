@@ -66,7 +66,8 @@ def test_groups_stay_together_with_star_and_no_multirow():
     assert r"\multirow" not in tex
     body = tex.split(r"\endlastfoot")[1]
     assert body.count(r"\\*") == 2          # first row of each group blocks the break
-    assert r"\cline" not in body and body.count(r"\hline") == 2   # rules only between groups
+    assert r"\cline" not in body and body.count(r"\hline") == 1   # a rule only between the two groups
+    assert tex.split(r"\endlastfoot")[0].rstrip("%\n ").endswith(r"\hline")   # closing rule is in the last foot
     # label shown only on the first row of a group
     assert body.count("G1") == 1 and body.count("G2") == 1
 
@@ -110,7 +111,7 @@ def test_table_compiles_cleanly_and_fits(compile_tex):
     body += K.data_table(cols4, [("A", "Yes", "1", "2")], caption="Merged",
                          header_groups=[("", 1), ("Braking Load", 3)])
     rc, log, pdf = compile_tex(r"\chapter{T}" + body)
-    errors = [l for l in log.splitlines() if l.startswith("!")]
+    errors = [ln for ln in log.splitlines() if ln.startswith("!")]
     assert errors == [] and rc == 0
     assert not re.findall(r"Overfull \\hbox \(([0-9.]+)pt", log) or \
         max(float(x) for x in re.findall(r"Overfull \\hbox \(([0-9.]+)pt", log)) <= 1.0
